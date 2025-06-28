@@ -1,8 +1,6 @@
 # Build files
 obj/
 *.o
-IFdataGen
-IFdataGen.exe
 
 # Output files
 *.C8
@@ -12,4 +10,4 @@ generated_files/
 # Temporary files
 *~
 *.swp
-.DS_Store
+.DS_Store.gitignore
