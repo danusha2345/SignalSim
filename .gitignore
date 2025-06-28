@@ -1,0 +1,15 @@
+# Build files
+obj/
+*.o
+IFdataGen
+IFdataGen.exe
+
+# Output files
+*.C8
+*.C4
+generated_files/
+
+# Temporary files
+*~
+*.swp
+.DS_Store
