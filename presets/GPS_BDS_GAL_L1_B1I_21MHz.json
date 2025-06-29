@@ -1,6 +1,6 @@
 {
 	"version": 1.0,
-	"description": "GPS L1 only - 5 MHz - 3 minutes",
+	"description": "GPS+BDS+GAL L1 bands (with B1I) - 21 MHz - 3 minutes",
 	"time": {
 		"type": "UTC",
 		"year": 2025,
@@ -11,7 +11,7 @@
 		"second": 30
 	},
 	"trajectory": {
-		"name": "GPS L5 test scenario",
+		"name": "GPS+BDS+GAL L1 with B1I test scenario",
 		"initPosition": {
 			"type": "LLA",
 			"format": "d",
@@ -38,9 +38,9 @@
 	"output": {
 		"type": "IFdata",
 		"format": "IQ8",
-		"sampleFreq": 5.0,
-		"centerFreq": 1575.42,
-		"name": "generated_files/GPS_L1_only_3min.C8",
+		"sampleFreq": 21,
+		"centerFreq": 1568.286,
+		"name": "generated_files/GPS_BDS_GAL_L1_B1I_21MHz_3min.C8",
 		"config": {
 			"elevationMask": 5
 		},
@@ -68,12 +68,12 @@
 			{
 				"system": "BDS",
 				"signal": "B1C",
-				"enable": false
+				"enable": true
 			},
 			{
 				"system": "BDS",
 				"signal": "B1I",
-				"enable": false
+				"enable": true
 			},
 			{
 				"system": "BDS",
@@ -98,7 +98,7 @@
 			{
 				"system": "Galileo",
 				"signal": "E1",
-				"enable": false
+				"enable": true
 			},
 			{
 				"system": "Galileo",
@@ -133,6 +133,6 @@
 			"unit": "dBHz",
 			"value": 40
 		},
-		"elevationAdjust": true
+		"elevationAdjust": false
 	}
 }

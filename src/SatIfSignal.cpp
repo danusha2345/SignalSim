@@ -117,6 +117,7 @@ complex_number CSatIfSignal::GetPrnValue(double& CurChip, double CodeStep)
 	complex_number PrnValue;
 	const int IsBoc = (PrnSequence->Attribute->Attribute) & PRN_ATTRIBUTE_BOC;
 	const int IsQmboc = (PrnSequence->Attribute->Attribute) & PRN_ATTRIBUTE_QMBOC;
+	const int IsCboc = (PrnSequence->Attribute->Attribute) & PRN_ATTRIBUTE_CBOC;
 
 	// Validate DataLength to prevent division by zero
 	if (DataLength <= 0) {
@@ -138,6 +139,7 @@ complex_number CSatIfSignal::GetPrnValue(double& CurChip, double CodeStep)
 	} else {
 		PrnValue = DataSignal * (DataPrn[DataChip] ? -1.0 : 1.0);
 		// Apply BOC to data channel (always BOC(1,1) for data)
+		// For L1C/B1C, data channel uses only BOC(1,1), not TMBOC
 		if (IsBoc && (ChipCount & 1))
 			PrnValue *= -1.0;
 	}
@@ -152,25 +154,53 @@ complex_number CSatIfSignal::GetPrnValue(double& CurChip, double CodeStep)
 		if (PilotChip >= 0 && PilotChip < PilotLength) {
 			complex_number pilotVal = PilotSignal * (PilotPrn[PilotChip] ? -1.0 : 1.0);
 			
-			// Apply QMBOC modulation for pilot channel if enabled
+			// Apply TMBOC modulation for pilot channel if enabled
+			// For GPS L1C: TMBOC(6,1,4/33) - Time Multiplexed BOC
 			if (IsQmboc && IsBoc) {
-				// QMBOC(6,1,4/33) implementation
-				// Use secondary code position to determine BOC(1,1) or BOC(6,1)
+				// TMBOC(6,1,4/33) implementation for L1C pilot
+				// The pattern repeats every 33 spreading symbols (33 ms for L1C)
 				// 4 out of 33 symbols use BOC(6,1), others use BOC(1,1)
-				int secondaryPos = (SignalTime.MilliSeconds / 10) % 33;  // 10ms per symbol, 33 symbols pattern
 				
-				if (secondaryPos == 1 || secondaryPos == 5 || secondaryPos == 7 || secondaryPos == 30) {
+				// Calculate position in the 33-symbol TMBOC pattern
+				// Each L1C symbol is 10ms, so we need position within 330ms cycle
+				int symbolPos = (SignalTime.MilliSeconds % 330) / 10;  // 0-32
+				
+				// GPS L1C standard specifies these 4 positions for BOC(6,1)
+				// (1-indexed in standard: 2, 6, 8, 31 -> 0-indexed: 1, 5, 7, 30)
+				if (symbolPos == 1 || symbolPos == 5 || symbolPos == 7 || symbolPos == 30) {
 					// These 4 positions use BOC(6,1)
 					// BOC(6,1) has 6 times higher subcarrier frequency than BOC(1,1)
-					int subChip = ChipCount % 12;  // 12 sub-chips for BOC(6,1) vs 2 for BOC(1,1)
-					if ((subChip >= 1 && subChip <= 5) || (subChip >= 7 && subChip <= 11))
+					// One BOC(6,1) cycle = 1/6 chip, so 12 half-cycles per chip
+					int subChipPos = ChipCount % 12;
+					// BOC(6,1) square wave: high for 0-5, low for 6-11
+					if (subChipPos >= 6)
 						pilotVal *= -1.0;
 				} else {
-					// Regular BOC(1,1) for other positions
+					// Regular BOC(1,1) for other 29 positions
 					if (ChipCount & 1)
 						pilotVal *= -1.0;
 				}
 				
+				PrnValue += pilotVal;
+			} else if (IsCboc && IsBoc) {
+				// CBOC(6,1,1/11) modulation for Galileo E1 pilot channel
+				// 10/11 of the time use BOC(1,1), 1/11 use BOC(6,1)
+				// The pattern is deterministic based on chip position within the 4092-chip code
+				int chipInCode = ChipCount % 4092;  // E1 code period is 4092 chips
+				
+				// CBOC pattern: every 11th chip uses BOC(6,1), others use BOC(1,1)
+				// This gives exactly 1/11 ratio over the full code period
+				if ((chipInCode % 11) == 0) {
+					// BOC(6,1) modulation for this chip
+					// 6 cycles per chip, so 12 half-cycles
+					int boc6Phase = ChipCount % 12;
+					if (boc6Phase >= 6)
+						pilotVal *= -1.0;
+				} else {
+					// BOC(1,1) modulation for most chips
+					if (ChipCount & 1)
+						pilotVal *= -1.0;
+				}
 				PrnValue += pilotVal;
 			} else {
 				// Standard BOC(1,1) modulation for pilot

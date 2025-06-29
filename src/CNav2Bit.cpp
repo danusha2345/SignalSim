@@ -7,6 +7,7 @@
 //----------------------------------------------------------------------
 
 #include <memory.h>
+#include <cmath>
 #include "ConstVal.h"
 #include "CNav2Bit.h"
 
@@ -928,10 +929,102 @@ const unsigned int CNav2Bit::L1CMatrixGen3[L1C_SUBFRAME3_SYMBOL_LENGTH*9] = {
 
 CNav2Bit::CNav2Bit()
 {
+	// Initialize all subframes to zero
+	memset(Subframe2, 0, sizeof(Subframe2));
+	memset(Subframe3, 0, sizeof(Subframe3));
+	
+	// Initialize Subframe3 page 0 with minimal valid data
+	// Page 0 is clock/iono page - critical for receivers
+	// Set message type ID = 30 (clock/iono) in bits 0-5
+	Subframe3[0][0] = 0x78000000;  // Message type 30 << 26
+	// Other fields will be zero (valid but no corrections)
 }
 
 CNav2Bit::~CNav2Bit()
 {
+}
+
+int CNav2Bit::SetIonoUtc(PIONO_PARAM IonoParam, PUTC_PARAM UtcParam)
+{
+	// Implement Subframe 3 Page 0 (Clock/Iono parameters)
+	// Message Type 30 for GPS L1C
+	unsigned int *page0 = Subframe3[0];
+	
+	// Clear the page first
+	memset(page0, 0, 9 * sizeof(unsigned int));
+	
+	// Message type 30 (6 bits)
+	page0[0] = 0x78000000;  // Type 30 << 26
+	
+	if (IonoParam) {
+		// Iono parameters (if available)
+		// Scale and convert to integer representation
+		// alpha0-3 (8 bits each) - scale factor 2^-30, 2^-27, 2^-24, 2^-24
+		int alpha0 = (int)(IonoParam->a0 / pow(2, -30));
+		int alpha1 = (int)(IonoParam->a1 / pow(2, -27));
+		int alpha2 = (int)(IonoParam->a2 / pow(2, -24));
+		int alpha3 = (int)(IonoParam->a3 / pow(2, -24));
+		
+		page0[0] |= (alpha0 & 0xFF) << 18;
+		page0[0] |= (alpha1 & 0xFF) << 10;
+		page0[0] |= (alpha2 & 0xFF) << 2;
+		page0[1] = (alpha3 & 0xFF) << 24;
+		
+		// beta0-3 (8 bits each) - scale factor 2^11, 2^14, 2^16, 2^16
+		int beta0 = (int)(IonoParam->b0 / pow(2, 11));
+		int beta1 = (int)(IonoParam->b1 / pow(2, 14));
+		int beta2 = (int)(IonoParam->b2 / pow(2, 16));
+		int beta3 = (int)(IonoParam->b3 / pow(2, 16));
+		
+		page0[1] |= (beta0 & 0xFF) << 16;
+		page0[1] |= (beta1 & 0xFF) << 8;
+		page0[1] |= (beta2 & 0xFF);
+		page0[2] = (beta3 & 0xFF) << 24;
+	}
+	
+	if (UtcParam) {
+		// UTC parameters
+		// A0 (16 bits) at bit offset 70
+		int a0_scaled = (int)(UtcParam->A0 / pow(2, -35));
+		page0[2] |= ((a0_scaled >> 10) & 0x3F) << 18;
+		page0[2] |= (a0_scaled & 0x3FF) << 8;
+		
+		// A1 (13 bits) at bit offset 86  
+		int a1_scaled = (int)(UtcParam->A1 / pow(2, -51));
+		page0[2] |= ((a1_scaled >> 5) & 0xFF);
+		page0[3] = (a1_scaled & 0x1F) << 27;
+		
+		// A2 (7 bits) at bit offset 99
+		int a2_scaled = (int)(UtcParam->A2 / pow(2, -68));
+		page0[3] |= (a2_scaled & 0x7F) << 20;
+		
+		// dtLS (8 bits) at bit offset 106
+		page0[3] |= (UtcParam->TLS & 0xFF) << 12;
+		
+		// tot (16 bits) at bit offset 114
+		unsigned int tot_scaled = UtcParam->tot << 12;  // tot is already scaled by 2^12
+		page0[3] |= ((tot_scaled >> 4) & 0xFFF);
+		page0[4] = (tot_scaled & 0xF) << 28;
+		
+		// WNot (13 bits) at bit offset 130
+		page0[4] |= (UtcParam->WN & 0x1FFF) << 15;
+		
+		// WNLSF (13 bits) at bit offset 143
+		page0[4] |= ((UtcParam->WNLSF >> 2) & 0x7FFF);
+		page0[5] = (UtcParam->WNLSF & 0x3) << 30;
+		
+		// DN (4 bits) at bit offset 156
+		page0[5] |= (UtcParam->DN & 0xF) << 26;
+		
+		// dtLSF (8 bits) at bit offset 160
+		page0[5] |= (UtcParam->TLSF & 0xFF) << 18;
+	}
+	
+	// Calculate and append CRC-24Q
+	unsigned int crc = Crc24qEncode(page0, 274);
+	page0[8] |= (crc << 8);
+	
+	return 1;
 }
 
 int CNav2Bit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits)

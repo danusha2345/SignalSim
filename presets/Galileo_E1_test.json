@@ -1,6 +1,6 @@
 {
 	"version": 1.0,
-	"description": "GPS L1 only - 5 MHz - 3 minutes",
+	"description": "E1 - 5 MHz - 3 minutes",
 	"time": {
 		"type": "UTC",
 		"year": 2025,
@@ -40,7 +40,7 @@
 		"format": "IQ8",
 		"sampleFreq": 5.0,
 		"centerFreq": 1575.42,
-		"name": "generated_files/GPS_L1_only_3min.C8",
+		"name": "generated_files/E1.C8",
 		"config": {
 			"elevationMask": 5
 		},
@@ -48,12 +48,12 @@
 			{
 				"system": "GPS",
 				"signal": "L1CA",
-				"enable": true
+				"enable": false
 			},
 			{
 				"system": "GPS",
 				"signal": "L1C",
-				"enable": true
+				"enable": false
 			},
 			{
 				"system": "GPS",
@@ -98,7 +98,7 @@
 			{
 				"system": "Galileo",
 				"signal": "E1",
-				"enable": false
+				"enable": true
 			},
 			{
 				"system": "Galileo",
@@ -133,6 +133,6 @@
 			"unit": "dBHz",
 			"value": 40
 		},
-		"elevationAdjust": true
+		"elevationAdjust": false
 	}
 }

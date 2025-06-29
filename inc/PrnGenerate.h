@@ -35,7 +35,8 @@ struct PrnAttribute
 };
 #define PRN_ATTRIBUTE_BOC 1
 #define PRN_ATTRIBUTE_TMD 2
-#define PRN_ATTRIBUTE_QMBOC 4  // For QMBOC modulation
+#define PRN_ATTRIBUTE_QMBOC 4  // For QMBOC modulation (BeiDou B1C)
+#define PRN_ATTRIBUTE_CBOC 8   // For CBOC modulation (Galileo E1)
 
 class PrnGenerate
 {
