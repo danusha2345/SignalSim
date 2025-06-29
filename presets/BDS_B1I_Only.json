@@ -131,7 +131,7 @@
 		"noiseFloor": -172,
 		"initPower": {
 			"unit": "dBHz",
-			"value": 40
+			"value": 45
 		},
 		"elevationAdjust": false
 	}
