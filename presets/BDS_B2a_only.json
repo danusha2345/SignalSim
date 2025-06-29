@@ -133,6 +133,6 @@
 			"unit": "dBHz",
 			"value": 40
 		},
-		"elevationAdjust": true
+		"elevationAdjust": false
 	}
 }

@@ -33,6 +33,14 @@ const unsigned int PrnGenerate::L2CLPrnInit[32] = {
 0x046b92b, 0x7a7c2ae, 0x45886a6, 0x5a9a643, 0x68872f2, 0x3e759f6, 0x6b6fdbd, 0x31b717b,
 0x048fcb0, 0x1cbc9e3, 0x6b38d5b, 0x6f5b8fa, 0x121a76e, 0x5f23c35, 0x326fd21, 0x3cb4e3c, };
 
+// Simplified P code initial states for L2P - unique per satellite
+// These are arbitrary unique values for simulation purposes only
+const unsigned int PrnGenerate::L2PPrnInit[32] = {
+0x1234567, 0x2345678, 0x3456789, 0x456789a, 0x56789ab, 0x6789abc, 0x789abcd, 0x89abcde,
+0x9abcdef, 0xabcdef0, 0xbcdef01, 0xcdef012, 0xdef0123, 0xef01234, 0xf012345, 0x0123456,
+0x1357924, 0x2468035, 0x3579146, 0x468a257, 0x579b368, 0x68ac479, 0x79bd58a, 0x8ace69b,
+0x9bdf7ac, 0xacf08bd, 0xbd019ce, 0xce12adf, 0xdf23be0, 0xe034cf1, 0xf145d02, 0x0256e13, };
+
 const unsigned int PrnGenerate::B1IPrnInit[63] = {
 0x187, 0x639, 0x1e6, 0x609, 0x605, 0x1f8, 0x606, 0x1f9, 0x704, 0x7be, 0x061, 0x78e, 0x782, 0x07f, 0x781, 0x07e,
 0x7df, 0x030, 0x03c, 0x7c1, 0x03f, 0x7c0, 0x7ef, 0x7e3, 0x01e, 0x7e0, 0x01f, 0x00c, 0x7f1, 0x00f, 0x7f0, 0x7fd,
@@ -141,7 +149,7 @@ const int PrnGenerate::L1CPilotPhaseDiff[63] = {
 const PrnAttribute PrnGenerate::PrnAttributes[] = {
 	// ChipRate DataPeriod PilotPeriod Attribute
 	{  1023,       1,         1,                 0 },	// index  0 for L1CA
-	{  2046,      10,        10, PRN_ATTRIBUTE_BOC },	// index  1 for L1C/B1C (BOC(1,1) treated as 2 chips per PRN code)
+	{  2046,      10,        10, PRN_ATTRIBUTE_BOC | PRN_ATTRIBUTE_QMBOC },	// index  1 for L1C/B1C (BOC(1,1) + QMBOC for pilot)
 	{  1023,      20,      1500, PRN_ATTRIBUTE_TMD },	// index  2 for L2C
 	{ 10230, 10230*2, 10230 * 2,                 0 },	// index  3 for L2P
 	{ 10230,       1,         1,                 0 },	// index  4 for L5/B2a/E5a/E5b
@@ -214,7 +222,9 @@ PrnGenerate::PrnGenerate(GnssSystem System, int SignalIndex, int Svid)
 			Attribute = &PrnAttributes[2];
 			break;
 		case SIGNAL_INDEX_L2P:
-			DataPrn  = new int[10230*2];
+			// Simplified P code implementation for simulation
+			// Note: Real P code is much more complex with ~1 week period
+			DataPrn  = GetSimplifiedPCode(Svid);
 			PilotPrn = NULL;
 			Attribute = &PrnAttributes[3];
 			break;
@@ -388,5 +398,48 @@ int *PrnGenerate::GetMemorySequence(const unsigned int *BinarySequence, int Sect
 		BinarySequence += 32;
 	}
 
+	return PrnSequence;
+}
+
+// Simplified P code generator for L2P
+// This generates a unique pseudo-random sequence for each satellite
+// Real P code is much more complex (period ~1 week), this is simplified for simulation
+int *PrnGenerate::GetSimplifiedPCode(int Svid)
+{
+	// Generate a 20460 chip sequence (2 periods of 10230 chips)
+	// Using LFSR with unique initial state per satellite
+	int *PrnSequence = new int[10230 * 2];
+	unsigned int lfsr1, lfsr2, lfsr3, lfsr4;
+	int i;
+	
+	// Initialize with satellite-specific seeds
+	lfsr1 = L2PPrnInit[Svid-1];
+	lfsr2 = L2PPrnInit[Svid-1] ^ 0x55555555;
+	lfsr3 = L2PPrnInit[Svid-1] ^ 0xAAAAAAAA;
+	lfsr4 = L2PPrnInit[Svid-1] ^ 0xFF00FF00;
+	
+	// Generate P code using 4 combined LFSRs for better randomness
+	for (i = 0; i < 10230 * 2; i++)
+	{
+		// Galois LFSR with polynomial x^32 + x^22 + x^2 + x^1 + 1
+		unsigned int bit1 = lfsr1 & 1;
+		lfsr1 = (lfsr1 >> 1) ^ (bit1 ? 0x80200003 : 0);
+		
+		// Second LFSR with different polynomial
+		unsigned int bit2 = lfsr2 & 1;
+		lfsr2 = (lfsr2 >> 1) ^ (bit2 ? 0x80000057 : 0);
+		
+		// Third LFSR
+		unsigned int bit3 = lfsr3 & 1;
+		lfsr3 = (lfsr3 >> 1) ^ (bit3 ? 0x8000001B : 0);
+		
+		// Fourth LFSR
+		unsigned int bit4 = lfsr4 & 1;
+		lfsr4 = (lfsr4 >> 1) ^ (bit4 ? 0x80000062 : 0);
+		
+		// Combine outputs
+		PrnSequence[i] = (bit1 ^ bit2 ^ bit3 ^ bit4);
+	}
+	
 	return PrnSequence;
 }

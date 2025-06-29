@@ -21,6 +21,12 @@ public:
 	~BCNav1Bit();
 
 	int GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits);
+	int SetIonoUtc(PIONO_PARAM IonoParam, PUTC_PARAM UtcParam);
+
+	void UpdateSubframe3Page1();
+	void UpdateSubframe3Page2();
+	void UpdateSubframe3Page3();
+	void UpdateSubframe3Page4();
 
 private:
 	unsigned int BdsSubframe3[63][11];	// 63 SVs, 264bits in subframe 3, 24bits (4 symbols) in bit23~0 of each DWORD MSB first, lowest address first

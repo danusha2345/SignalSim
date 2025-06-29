@@ -19,7 +19,7 @@ public:
 
 	int SetEphemeris(int svid, PGPS_EPHEMERIS Eph);
 	int SetAlmanac(GPS_ALMANAC Alm[]);
-	int SetIonoUtc(PIONO_PARAM IonoParam, PUTC_PARAM UtcParam) { return 0; };
+	int SetIonoUtc(PIONO_PARAM IonoParam, PUTC_PARAM UtcParam);
 
 	int AppendWord(unsigned int *Dest, int StartBit, unsigned int *Src, int Length);
 	int AssignBits(unsigned int Data, int BitNumber, int BitStream[]);

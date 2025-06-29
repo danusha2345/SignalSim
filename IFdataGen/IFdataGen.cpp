@@ -204,6 +204,7 @@ int main(int argc, char* argv[])
 	NavBitArray[DataBitCNav]->SetIonoUtc(NavData.GetGpsIono(), NavData.GetGpsUtcParam());
 	NavBitArray[DataBitCNav2]->SetIonoUtc(NavData.GetGpsIono(), NavData.GetGpsUtcParam());
 	NavBitArray[DataBitD1D2]->SetIonoUtc(NavData.GetBdsIono(), NavData.GetBdsUtcParam());
+	NavBitArray[DataBitBCNav1]->SetIonoUtc(NavData.GetBdsIono(), NavData.GetBdsUtcParam());
 	NavBitArray[DataBitINav]->SetIonoUtc(NavData.GetGalileoIono(), NavData.GetGalileoUtcParam());
 	NavBitArray[DataBitFNav]->SetIonoUtc(NavData.GetGalileoIono(), NavData.GetGalileoUtcParam());
 	// Find ephemeris match current time and fill in data to generate bit stream

@@ -206,6 +206,14 @@ const char BCNav1Bit::B1CMatrixGen3[B1C_SUBFRAME3_SYMBOL_LENGTH*B1C_SUBFRAME3_SY
 
 BCNav1Bit::BCNav1Bit()
 {
+	// Initialize subframe3 array to zero
+	memset(BdsSubframe3, 0, sizeof(BdsSubframe3));
+	
+	// Initialize page type IDs for all 4 pages
+	UpdateSubframe3Page1();
+	UpdateSubframe3Page2();
+	UpdateSubframe3Page3();
+	UpdateSubframe3Page4();
 }
 
 BCNav1Bit::~BCNav1Bit()
@@ -246,6 +254,8 @@ int BCNav1Bit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBi
 		AssignBits(Symbol2[i], 6, bits2+i*6);
 
 	// generate CRC for subframe3
+	// Use the appropriate page from BdsSubframe3 array
+	// page is already calculated above (0-3)
 	data = BdsSubframe3[page];
 	AppendCRC(data, 11);
 	// assign each 6bit into Symbol3 array
@@ -285,12 +295,12 @@ int BCNav1Bit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBi
 	}
 
 	// add subframe 1
-	AssignBits(BCH_prn_table[svid], 21, NavBits);
+	AssignBits(BCH_prn_table[svid-1], 21, NavBits);
 	value = (unsigned int)(BCH_soh_table[soh] >> 32);
 	AssignBits(value, 19, NavBits + 21);
 	value = (unsigned int)(BCH_soh_table[soh]);
 	AssignBits(value, 32, NavBits + 40);
-	return 0;
+	return 1800;  // B1C frame length is 1800 bits
 }
 
 void BCNav1Bit::ComposeSubframe2(int week, int how, int svid, unsigned int Frame2Data[25])
@@ -306,4 +316,132 @@ void BCNav1Bit::ComposeSubframe2(int week, int how, int svid, unsigned int Frame
 	Frame2Data[22] |= COMPOSE_BITS(TgsIscParam[svid-1][1], 7, 12);
 	Frame2Data[22] |= COMPOSE_BITS(TgsIscParam[svid-1][0] >> 17, 0, 7);
 	Frame2Data[23] = COMPOSE_BITS(TgsIscParam[svid-1][0], 7, 17);
+}
+
+int BCNav1Bit::SetIonoUtc(PIONO_PARAM IonoParam, PUTC_PARAM UtcParam)
+{
+	// Set ionospheric parameters from Klobuchar model (IONO_PARAM) to BDGIM format
+	if (IonoParam && (IonoParam->flag & 1))
+	{
+		// Convert Klobuchar parameters to BDGIM format
+		// BDGIM uses similar parameters but with different scaling
+		// a0-a3 coefficients (amplitude terms)
+		BdGimIono[0] = ((int)(IonoParam->a0 * (1 << 30)) & 0xFF) << 16;  // 8 bits, scale 2^-30
+		BdGimIono[0] |= ((int)(IonoParam->a1 * (1 << 27)) & 0xFF) << 8;  // 8 bits, scale 2^-27
+		BdGimIono[0] |= ((int)(IonoParam->a2 * (1 << 24)) & 0xFF);       // 8 bits, scale 2^-24
+		BdGimIono[1] = ((int)(IonoParam->a3 * (1 << 24)) & 0xFF) << 24;  // 8 bits, scale 2^-24
+		
+		// b0-b3 coefficients (period terms)
+		BdGimIono[1] |= ((int)(IonoParam->b0 / (1 << 11)) & 0xFF) << 16; // 8 bits, scale 2^11
+		BdGimIono[1] |= ((int)(IonoParam->b1 / (1 << 14)) & 0xFF) << 8;  // 8 bits, scale 2^14
+		BdGimIono[1] |= ((int)(IonoParam->b2 / (1 << 16)) & 0xFF);       // 8 bits, scale 2^16
+		BdGimIono[2] = ((int)(IonoParam->b3 / (1 << 16)) & 0xFF) << 24;  // 8 bits, scale 2^16
+		
+		// Additional BDGIM parameters (reserved/zero for basic model)
+		BdGimIono[2] |= 0; // Reserved bits
+		
+		// Update Subframe 3 Page 1 with ionospheric data
+		UpdateSubframe3Page1();
+	}
+	
+	// Set UTC parameters
+	if (UtcParam && (UtcParam->flag & 1))
+	{
+		// A0UTC - BDT to UTC offset (32 bits, scale 2^-30 seconds)
+		BdtUtcParam[0] = (unsigned int)(UtcParam->A0 * (1 << 30));
+		
+		// A1UTC - drift rate (24 bits, scale 2^-50 s/s)
+		BdtUtcParam[1] = ((unsigned int)(UtcParam->A1 * (1LL << 50)) & 0xFFFFFF) << 8;
+		
+		// toc - reference time (8 bits, scale 2^12 seconds)
+		BdtUtcParam[1] |= (UtcParam->tot >> 4) & 0xFF;
+		
+		// WNoc - week number (8 bits)
+		BdtUtcParam[2] = (UtcParam->WN & 0xFF) << 24;
+		
+		// ΔTLS - current leap seconds (8 bits)
+		BdtUtcParam[2] |= (UtcParam->TLS & 0xFF) << 16;
+		
+		// WNLSF - week of next leap second (8 bits)
+		BdtUtcParam[2] |= (UtcParam->WNLSF & 0xFF) << 8;
+		
+		// DN - day number (3 bits) + ΔTLSF - future leap seconds (8 bits)
+		BdtUtcParam[2] |= (UtcParam->DN & 0x7) << 5;
+		BdtUtcParam[3] = (UtcParam->TLSF & 0xFF) << 24;
+		
+		// Update Subframe 3 Page 2 with UTC data
+		UpdateSubframe3Page2();
+	}
+	
+	return 0;
+}
+
+void BCNav1Bit::UpdateSubframe3Page1()
+{
+	// Page Type 1: Ionosphere parameters (Message Type ID = 1)
+	BdsSubframe3[0][0] = (1 << 17);  // Message Type ID in bits 22-17
+	
+	// Copy BDGIM ionosphere parameters (74 bits total)
+	if (BdGimIono[0] != 0 || BdGimIono[1] != 0 || BdGimIono[2] != 0)
+	{
+		// First 16 bits of iono data go to remaining bits of word 0
+		BdsSubframe3[0][0] |= (BdGimIono[0] >> 8) & 0x1FFFF;
+		// Continue with subsequent words
+		BdsSubframe3[0][1] = ((BdGimIono[0] & 0xFF) << 16) | ((BdGimIono[1] >> 16) & 0xFFFF);
+		BdsSubframe3[0][2] = ((BdGimIono[1] & 0xFFFF) << 8) | ((BdGimIono[2] >> 24) & 0xFF);
+		BdsSubframe3[0][3] = (BdGimIono[2] & 0xFFFFFF);
+	}
+	
+	// Add signal integrity indicators (SISAI) and other parameters
+	// These would come from system configuration or ephemeris health status
+	BdsSubframe3[0][3] |= 0;  // Placeholder for SISAI_B1C, SISAI_B2a, etc.
+}
+
+void BCNav1Bit::UpdateSubframe3Page2()
+{
+	// Page Type 2: UTC parameters (Message Type ID = 2)
+	BdsSubframe3[1][0] = (2 << 17);  // Message Type ID in bits 22-17
+	
+	// Copy BDT-UTC parameters (97 bits total)
+	if (BdtUtcParam[0] != 0 || BdtUtcParam[1] != 0)
+	{
+		// UTC parameters layout in Subframe 3
+		// A0UTC (32 bits)
+		BdsSubframe3[1][0] |= (BdtUtcParam[0] >> 15) & 0x1FFFF;
+		BdsSubframe3[1][1] = ((BdtUtcParam[0] & 0x7FFF) << 9) | ((BdtUtcParam[1] >> 23) & 0x1FF);
+		
+		// A1UTC (24 bits) + toc (8 bits)
+		BdsSubframe3[1][2] = ((BdtUtcParam[1] & 0x7FFFFF) << 1) | ((BdtUtcParam[2] >> 31) & 0x1);
+		
+		// WNoc (8 bits) + ΔTLS (8 bits) + WNLSF (8 bits) + DN (3 bits) + ΔTLSF (8 bits)
+		BdsSubframe3[1][3] = ((BdtUtcParam[2] & 0x7FFFFFFF) >> 7);
+		BdsSubframe3[1][4] = ((BdtUtcParam[2] & 0x7F) << 17) | ((BdtUtcParam[3] >> 7) & 0x1FFFF);
+	}
+	
+	// Add satellite health status information if available
+	// This would typically come from ephemeris health flags
+}
+
+void BCNav1Bit::UpdateSubframe3Page3()
+{
+	// Page Type 3: EOP and BGTO parameters (Message Type ID = 3)
+	BdsSubframe3[2][0] = (3 << 17);  // Message Type ID in bits 22-17
+	
+	// EOP parameters (138 bits) - Earth Orientation Parameters
+	// These would be filled if available from external sources
+	// For now, leave as zeros
+	
+	// BGTO parameters (68 bits) - BeiDou to GPS Time Offset
+	// These would be filled if available from system configuration
+	// For now, leave as zeros
+}
+
+void BCNav1Bit::UpdateSubframe3Page4()
+{
+	// Page Type 4: Reduced almanac (Message Type ID = 4)
+	BdsSubframe3[3][0] = (4 << 17);  // Message Type ID in bits 22-17
+	
+	// Almanac data would be filled based on which satellites need updates
+	// The reduced almanac format is already handled in SetAlmanac()
+	// For now, leave as zeros - will be filled when almanac is available
 }

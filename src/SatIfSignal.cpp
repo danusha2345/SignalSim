@@ -116,6 +116,7 @@ complex_number CSatIfSignal::GetPrnValue(double& CurChip, double CodeStep)
 	int DataChip, PilotChip;
 	complex_number PrnValue;
 	const int IsBoc = (PrnSequence->Attribute->Attribute) & PRN_ATTRIBUTE_BOC;
+	const int IsQmboc = (PrnSequence->Attribute->Attribute) & PRN_ATTRIBUTE_QMBOC;
 
 	// Validate DataLength to prevent division by zero
 	if (DataLength <= 0) {
@@ -136,6 +137,9 @@ complex_number CSatIfSignal::GetPrnValue(double& CurChip, double CodeStep)
 		PrnValue = complex_number(0, 0);
 	} else {
 		PrnValue = DataSignal * (DataPrn[DataChip] ? -1.0 : 1.0);
+		// Apply BOC to data channel (always BOC(1,1) for data)
+		if (IsBoc && (ChipCount & 1))
+			PrnValue *= -1.0;
 	}
 	
 	// Enhanced pilot signal processing with bounds checking
@@ -146,12 +150,37 @@ complex_number CSatIfSignal::GetPrnValue(double& CurChip, double CodeStep)
 			
 		// Add explicit bounds check for PilotChip after BOC adjustment
 		if (PilotChip >= 0 && PilotChip < PilotLength) {
-			PrnValue += PilotSignal * (PilotPrn[PilotChip] ? -1.0 : 1.0);
+			complex_number pilotVal = PilotSignal * (PilotPrn[PilotChip] ? -1.0 : 1.0);
+			
+			// Apply QMBOC modulation for pilot channel if enabled
+			if (IsQmboc && IsBoc) {
+				// QMBOC(6,1,4/33) implementation
+				// Use secondary code position to determine BOC(1,1) or BOC(6,1)
+				// 4 out of 33 symbols use BOC(6,1), others use BOC(1,1)
+				int secondaryPos = (SignalTime.MilliSeconds / 10) % 33;  // 10ms per symbol, 33 symbols pattern
+				
+				if (secondaryPos == 1 || secondaryPos == 5 || secondaryPos == 7 || secondaryPos == 30) {
+					// These 4 positions use BOC(6,1)
+					// BOC(6,1) has 6 times higher subcarrier frequency than BOC(1,1)
+					int subChip = ChipCount % 12;  // 12 sub-chips for BOC(6,1) vs 2 for BOC(1,1)
+					if ((subChip >= 1 && subChip <= 5) || (subChip >= 7 && subChip <= 11))
+						pilotVal *= -1.0;
+				} else {
+					// Regular BOC(1,1) for other positions
+					if (ChipCount & 1)
+						pilotVal *= -1.0;
+				}
+				
+				PrnValue += pilotVal;
+			} else {
+				// Standard BOC(1,1) modulation for pilot
+				if (IsBoc && (ChipCount & 1))
+					pilotVal *= -1.0;
+				PrnValue += pilotVal;
+			}
 		}
 	}
 	
-	if (IsBoc && (ChipCount & 1))	// second half of BOC code
-		PrnValue *= -1.0;
 	CurChip += CodeStep;
 	// check whether go beyond next code period (pilot code period multiple of data code period, so only check data period)
 	if (DataLength > 0 && (((int)CurChip) % DataLength) < DataChip)

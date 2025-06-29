@@ -171,7 +171,13 @@ BOOL CSatelliteSignal::GetSatelliteSignal(GNSS_TIME TransmitTime, complex_number
 
 	if (FrameNumber != CurrentFrame)
 	{
-		if (NavData && Svid > 0 && Svid <= 32)
+		// Different systems have different max satellite numbers
+		int MaxSvid = 32;  // Default for GPS
+		if (SatSystem == BdsSystem) MaxSvid = 63;
+		else if (SatSystem == GalileoSystem) MaxSvid = 36;
+		else if (SatSystem == GlonassSystem) MaxSvid = 24;
+		
+		if (NavData && Svid > 0 && Svid <= MaxSvid)
 			NavData->GetFrameData(TransmitTime, Svid, Param, DataBits);
 		CurrentFrame = FrameNumber;
 	}

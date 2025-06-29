@@ -1,6 +1,6 @@
 {
 	"version": 1.0,
-	"description": "BeiDou B1C only - 5 MHz - 180 seconds test",
+	"description": "BeiDou B1I + B1C dual - 20 MHz - 30 seconds test",
 	"time": {
 		"type": "UTC",
 		"year": 2025,
@@ -11,7 +11,7 @@
 		"second": 30
 	},
 	"trajectory": {
-		"name": "BeiDou B1C test scenario",
+		"name": "BeiDou B1I+B1C test scenario",
 		"initPosition": {
 			"type": "LLA",
 			"format": "d",
@@ -22,7 +22,7 @@
 		"initVelocity": {
 			"type": "SCU",
 			"speed": 0,
-			"course": 318.91
+			"course": 0
 		},
 		"trajectoryList": [
 			{
@@ -38,9 +38,9 @@
 	"output": {
 		"type": "IFdata",
 		"format": "IQ8",
-		"sampleFreq": 5.0,
-		"centerFreq": 1575.42,
-		"name": "generated_files/BDS_B1C_only_3min.C8",
+		"sampleFreq": 20.0,
+		"centerFreq": 1568.259,
+		"name": "generated_files/BDS_B1I_B1C_dual_30s.C8",
 		"config": {
 			"elevationMask": 5
 		},
@@ -59,11 +59,21 @@
 				"system": "GPS",
 				"signal": "L2C",
 				"enable": false
-			},			
+			},
+			{
+				"system": "GPS",
+				"signal": "L2P",
+				"enable": false
+			},
 			{
 				"system": "GPS",
 				"signal": "L5",
 				"enable": false
+			},
+			{
+				"system": "BDS",
+				"signal": "B1I",
+				"enable": true
 			},
 			{
 				"system": "BDS",
@@ -72,17 +82,12 @@
 			},
 			{
 				"system": "BDS",
-				"signal": "B1I",
+				"signal": "B2I",
 				"enable": false
 			},
 			{
 				"system": "BDS",
 				"signal": "B2a",
-				"enable": false
-			},
-			{
-				"system": "BDS",
-				"signal": "B2I",
 				"enable": false
 			},
 			{

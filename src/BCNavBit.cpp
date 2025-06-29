@@ -330,3 +330,10 @@ int BCNavBit::FillBdsAlmanacPage(PGPS_ALMANAC Almanac, unsigned int MidiAlm[8], 
 {
 	return 0;
 }
+
+int BCNavBit::SetIonoUtc(PIONO_PARAM IonoParam, PUTC_PARAM UtcParam)
+{
+	// Default implementation - does nothing
+	// Derived classes (like BCNav1Bit) can override this
+	return 0;
+}

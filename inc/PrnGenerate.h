@@ -35,6 +35,7 @@ struct PrnAttribute
 };
 #define PRN_ATTRIBUTE_BOC 1
 #define PRN_ATTRIBUTE_TMD 2
+#define PRN_ATTRIBUTE_QMBOC 4  // For QMBOC modulation
 
 class PrnGenerate
 {
@@ -51,12 +52,14 @@ private:
 	int *GetL1CWeil(int InsertPoint, int PhaseDiff);
 	int *GetB1CWeil(int TruncationPoint, int PhaseDiff);
 	int *GetMemorySequence(const unsigned int *BinarySequence, int SectorLength);
+	int *GetSimplifiedPCode(int Svid);  // Simplified P code for L2P
 
 	static const unsigned int L1CAPrnInit[32];
 	static const unsigned int L5IPrnInit[32];
 	static const unsigned int L5QPrnInit[32];
 	static const unsigned int L2CMPrnInit[32];
 	static const unsigned int L2CLPrnInit[32];
+	static const unsigned int L2PPrnInit[32];  // P code initial states for L2P
 	static const unsigned int B1IPrnInit[63];
 	static const unsigned int B3IPrnInit[63];
 	static const unsigned int B2aDPrnInit[63];
