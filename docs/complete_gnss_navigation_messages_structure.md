@@ -555,6 +555,86 @@ Strings 7, 9, 11, 13, 15 (even almanac satellites):
 | 14   | Reserved                   | -                 |
 | 16   | Text messages              | Variable          |
 
+**Detailed L3OC String Structure:**
+
+**String 1 - Time Information and Status:**
+| Bits | Parameter | Description | Scale Factor |
+|------|-----------|-------------|--------------|
+| 1-2 | String Type | Identifier = 01 | - |
+| 3-4 | P | SV operation mode | - |
+| 5-8 | t_k | Frame start time | 3 hours |
+| 9-13 | x'_n(t_b) | X velocity (MSBs) | 2^-11 km/s |
+| 14-18 | x'_n(t_b) | X acceleration | 2^-30 km/s² |
+| 19-45 | x_n(t_b) | X coordinate | 2^-11 km |
+| 46-50 | Reserved | - | - |
+
+**String 2 - Y Ephemeris:**
+| Bits | Parameter | Description | Scale Factor |
+|------|-----------|-------------|--------------|
+| 1-2 | String Type | Identifier = 10 | - |
+| 3-5 | B_n | Health flag | - |
+| 6-10 | P | Technological parameter | - |
+| 11-35 | y_n(t_b) | Y coordinate | 2^-11 km |
+| 36-45 | y'_n(t_b) | Y velocity | 2^-20 km/s |
+| 46-50 | y'_n(t_b) | Y acceleration (MSBs) | 2^-30 km/s² |
+
+**String 3 - Z Ephemeris and Frequency:**
+| Bits | Parameter | Description | Scale Factor |
+|------|-----------|-------------|--------------|
+| 1-2 | String Type | Identifier = 11 | - |
+| 3-5 | y'_n(t_b) | Y acceleration (LSBs) | 2^-30 km/s² |
+| 6-6 | P | Almanac flag | - |
+| 7-31 | z_n(t_b) | Z coordinate | 2^-11 km |
+| 32-41 | z'_n(t_b) | Z velocity | 2^-20 km/s |
+| 42-46 | z'_n(t_b) | Z acceleration (MSBs) | 2^-30 km/s² |
+| 47-50 | Reserved | - | - |
+
+**String 4 - Time Parameters:**
+| Bits | Parameter | Description | Scale Factor |
+|------|-----------|-------------|--------------|
+| 1-2 | String Type | Identifier = 00 | - |
+| 3-7 | z'_n(t_b) | Z acceleration (LSBs) | 2^-30 km/s² |
+| 8-22 | τ_n(t_b) | SV clock bias | 2^-31 s |
+| 23-28 | Δτ_n | SV-GLONASS time difference | 2^-31 s |
+| 29-33 | E_n | Ephemeris age | days |
+| 34-35 | Reserved | - | - |
+| 36-37 | P | Modification flag | - |
+| 38-43 | FT | Validity forecast | 15 min |
+| 44-50 | Reserved | - | - |
+
+**String 5 - Almanac and GLONASS Time:**
+| Bits | Parameter | Description | Scale Factor |
+|------|-----------|-------------|--------------|
+| 1-2 | String Type | Identifier = 01 | - |
+| 3-13 | N^A | Day within 4-year period | days |
+| 14-16 | τ_c | GLONASS time correction | 2^-31 s |
+| 17-21 | N_4 | 4-year period number | 4 years |
+| 22-26 | τ_GPS | GLONASS-GPS correction | 2^-30 s |
+| 27-31 | l_n | SV health flag | - |
+| 32-50 | Reserved | - | - |
+
+**Strings 6-15 - Almanac for SV 1-10:**
+Each pair of strings contains almanac for one SV:
+
+**Odd String (6, 8, 10, 12, 14):**
+| Bits | Parameter | Description | Scale Factor |
+|------|-----------|-------------|--------------|
+| 1-2 | String Type | Identifier | - |
+| 3-4 | P | SV status | - |
+| 5-9 | H_n^A | Frequency number | - |
+| 10-30 | λ_n^A | Longitude of first ascending node | 2^-20 semicircles |
+| 31-36 | t_λn^A | Time of node passage | 2^-5 s |
+| 37-50 | Δi_n^A | Inclination correction | 2^-20 semicircles |
+
+**Even String (7, 9, 11, 13, 15):**
+| Bits | Parameter | Description | Scale Factor |
+|------|-----------|-------------|--------------|
+| 1-2 | String Type | Identifier | - |
+| 3-17 | ΔT_n^A | Period correction | 2^-9 s/orbit |
+| 18-24 | ΔT'_n^A | Rate of period change | 2^-14 s/orbit² |
+| 25-39 | ε_n^A | Eccentricity | 2^-20 |
+| 40-50 | ω_n^A | Argument of perigee | 2^-15 semicircles |
+
 ---
 
 ## Galileo (EU)
@@ -762,6 +842,70 @@ Used for transmitting search and rescue service data.
 |193-224| ω           | Argument of perigee               | semicircles (LSB=2^-31)|
 |225-238| IDOT        | Rate of change of inclination     | semicircles/s (LSB=2^-43)|
 |239-244| Spare       | Reserved                          | -                      |
+
+### Galileo E5b I/NAV - Detailed Structure
+
+**General Parameters:**
+- **Frequency**: 1207.14 MHz
+- **Data rate**: 125 symbols/sec (250 bits/sec with FEC)
+- **Modulation**: BPSK
+- **FEC**: Convolutional coding rate 1/2 with interleaving
+- **Format**: Identical to E1-B I/NAV
+
+**Page Structure**: 2 seconds (250 bits)
+
+| Bits | Parameter | Description |
+|------|-----------|-------------|
+| 1-10 | Sync pattern | 0101100000 for nominal page |
+| 11 | Even/Odd | 0=even, 1=odd |
+| 12 | Page Type | 0=nominal, 1=alert |
+| 13-128 | Data field | 116 bits (58 information bits after FEC) |
+| 129-240 | Reserved | For future use |
+| 241-250 | Tail | Convolutional code tail |
+
+**Word Types:**
+
+**Word 0 - Time and Status:**
+| Bits | Parameter | Description | Scale Factor |
+|------|-----------|-------------|--------------|
+| 1-2 | Time | Type of time relation | - |
+| 3-31 | WN | Week Number | weeks |
+| 32-51 | TOW | Time of Week | seconds |
+| 52-55 | Signal Health | E5b signal health status | - |
+| 56-57 | DVS | Data Validity Status | - |
+
+**Words 1-4 - Ephemeris:**
+Contains orbital parameters identical to E1-B I/NAV
+
+**Word 5 - Ionospheric Correction and BGD:**
+| Bits | Parameter | Description | Scale Factor |
+|------|-----------|-------------|--------------|
+| 1-12 | ai0 | Ionospheric coefficient α₀ | 2^-2 sfu |
+| 13-23 | ai1 | Ionospheric coefficient α₁ | 2^-8 sfu/semicircle |
+| 24-37 | ai2 | Ionospheric coefficient α₂ | 2^-15 sfu/semicircle² |
+| 39-48 | BGD E5a/E1 | Broadcast Group Delay | 2^-32 s |
+| 49-58 | BGD E5b/E1 | Broadcast Group Delay | 2^-32 s |
+
+**Word 6 - GST-UTC Conversion:**
+Galileo System Time to UTC conversion parameters
+
+**Words 7-10 - Almanac:**
+Reduced precision orbital data for all satellites
+
+### Galileo E1-C - Secondary Pilot Signal
+
+**General Parameters:**
+- **Frequency**: 1575.42 MHz (same as E1-B)
+- **Chip rate**: 1.023 Mchip/s
+- **Modulation**: CBOC(6,1,1/11) for pilot
+- **Data**: No data (pilot signal only)
+- **Code**: Memory code length 4092 chips (4 ms)
+- **Secondary code**: 25 chips, 100 ms period
+
+E1-C is used for:
+- Enhanced carrier tracking
+- More accurate pseudorange measurements
+- Operation in weak signal conditions
 
 ### Galileo E6 HAS - Detailed Structure
 
@@ -1936,6 +2080,80 @@ Contain messages of various types:
 - **Data Rate**: 50 symbols/sec (SPS), 50 symbols/sec (RS)
 - **Modulation**: BPSK(1) for SPS, BOC(5,2) for RS
 - **Structure**: Similar to L5 but with additional RS signal
+
+**Detailed S-band Navigation Message Structure:**
+
+**Superframe Structure**: 2400 bits
+- 4 subframes of 600 bits each
+- Data rate: 50 bits/sec
+- Superframe duration: 48 seconds
+
+**Subframe 1 - Ephemeris and Clock Parameters:**
+| Bits | Parameter | Description | Scale Factor |
+|------|-----------|-------------|--------------|
+| 1-8 | TLM | Telemetry word | - |
+| 9-30 | HOW | Handover Word | - |
+| 31-37 | TOWC | Time of Week Count | 12 s |
+| 38-39 | Alert flag | Alert flag | - |
+| 40-41 | Autonav | Autonomous navigation flag | - |
+| 42-49 | Spare | Reserved | - |
+| 50-60 | WN | Week Number | weeks |
+| 61-81 | af0 | Satellite clock bias | 2^-31 s |
+| 82-98 | af1 | Satellite clock drift | 2^-43 s/s |
+| 99-106 | af2 | Satellite clock drift rate | 2^-55 s/s² |
+| 107-108 | Sura | User range accuracy | - |
+| 109-112 | Health | Satellite health | - |
+| 113-120 | TGD | Time group delay | 2^-31 s |
+| 121-130 | IODC | Issue of Data Clock | - |
+| 131-152 | toc | Clock data reference time | 2^4 s |
+| 153-600 | Ephemeris | Orbital parameters | various |
+
+**Detailed Ephemeris Structure in Subframe 1:**
+| Bits | Parameter | Description | Scale Factor |
+|------|-----------|-------------|--------------|
+| 153-160 | Special flags | Special flags | - |
+| 161-176 | CRS | Sine correction to radius | 2^-5 m |
+| 177-184 | Δn | Mean motion difference | 2^-41 rad/s |
+| 185-216 | M0 | Mean anomaly | 2^-31 semicircles |
+| 217-232 | CUC | Cosine correction to argument of latitude | 2^-29 rad |
+| 233-264 | e | Eccentricity | 2^-33 |
+| 265-280 | CUS | Sine correction to argument of latitude | 2^-29 rad |
+| 281-312 | A^1/2 | Square root of semi-major axis | 2^-19 m^1/2 |
+| 313-330 | toe | Ephemeris reference time | 2^4 s |
+| 331-346 | CIC | Cosine correction to inclination | 2^-29 rad |
+| 347-378 | Ω0 | Longitude of ascending node | 2^-31 semicircles |
+| 379-394 | CIS | Sine correction to inclination | 2^-29 rad |
+| 395-426 | i0 | Inclination angle | 2^-31 semicircles |
+| 427-442 | CRC | Cosine correction to radius | 2^-5 m |
+| 443-474 | ω | Argument of perigee | 2^-31 semicircles |
+| 475-498 | Ω̇ | Rate of ascending node | 2^-38 semicircles/s |
+| 499-508 | IODE | Issue of Data Ephemeris | - |
+| 509-522 | iDOT | Rate of inclination angle | 2^-43 semicircles/s |
+| 523-600 | Reserved | - | - |
+
+**Subframes 2 and 3 - Almanac:**
+Contains almanac for all NavIC satellites:
+- Subframe 2: Satellites 1-4
+- Subframe 3: Satellites 5-7
+
+**Almanac Structure per Satellite (150 bits):**
+| Bits | Parameter | Description | Scale Factor |
+|------|-----------|-------------|--------------|
+| 1-7 | Health | Satellite health | - |
+| 8-17 | e | Eccentricity | 2^-21 |
+| 18-29 | toa | Almanac reference time | 2^12 s |
+| 30-45 | δi | Inclination correction | 2^-19 semicircles |
+| 46-61 | Ω̇ | Rate of right ascension | 2^-38 semicircles/s |
+| 62-85 | A^1/2 | Square root of semi-major axis | 2^-11 m^1/2 |
+| 86-109 | Ω0 | Longitude of ascending node | 2^-23 semicircles |
+| 110-133 | ω | Argument of perigee | 2^-23 semicircles |
+| 134-150 | M0 | Mean anomaly | 2^-23 semicircles |
+
+**Subframe 4 - Special Messages:**
+- Ionospheric parameters
+- UTC parameters
+- Text messages
+- Differential correction parameters
 
 ---
 
