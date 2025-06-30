@@ -1034,6 +1034,177 @@ Used for transmitting search and rescue service data.
 | 9 | Ephemeris (part 6) |
 | 10 | Ephemeris (part 7) |
 
+## D2 Detailed Word Structure by Pages
+
+### Page 1 - Basic Navigation Parameters
+
+| Word | Bits | Parameter | Description | Scale Factor |
+|-------|------|----------|----------|---------|
+| 1 | 1-11 | Preamble | 11100010010 | - |
+| 1 | 12-14 | FraID | ID subframe (001) | - |
+| 1 | 15-22 | SOW[19:12] | Seconds of Week MSB | 1 |
+| 1 | 23-26 | BCH | Error correction | - |
+| 1 | 27-30 | Reserved | - | - |
+| 2 | 1-4 | Pnum | Page number (0001) | - |
+| 2 | 5 | SatH1 | Satellite health | - |
+| 2 | 6-10 | IODC | Issue of Data Clock | - |
+| 2 | 11-14 | URAI | User Range Accuracy Index | - |
+| 2 | 15-22 | Reserved | - | - |
+| 3 | 1-4 | URAI (продолжение) | User Range Accuracy Index | - |
+| 3 | 5-17 | WN | Week Number BDT | 1 |
+| 3 | 18-22 | t_oc[16:12] | Clock reference time MSB | 2^3 |
+| 4 | 1-12 | t_oc[11:0] | Clock reference time LSB | 2^3 |
+| 4 | 13-22 | TGD1 | Group Delay B1I | 0.1 нс |
+
+### Page 2 - Ionospheric Parameters
+
+| Word | Bits | Parameter | Description | Scale Factor |
+|-------|------|----------|----------|---------|
+| 1 | 1-11 | Preamble | 11100010010 | - |
+| 1 | 12-14 | FraID | ID subframe (001) | - |
+| 1 | 15-22 | SOW[19:12] | Seconds of Week MSB | 1 |
+| 2 | 1-4 | Pnum | Page number (0010) | - |
+| 2 | 5-10 | TGD2 | Group Delay B2I | 0.1 нс |
+| 2 | 11-22 | Reserved | - | - |
+| 3 | 1-2 | Reserved | - | - |
+| 3 | 3-10 | α_0 | Ionospheric parameter | 2^-30 |
+| 3 | 11-18 | α_1 | Ionospheric parameter | 2^-27 |
+| 3 | 19-22 | α_2[7:4] | Ionospheric parameter MSB | 2^-24 |
+| 4 | 1-4 | α_2[3:0] | Ionospheric parameter LSB | 2^-24 |
+| 4 | 5-12 | α_3 | Ionospheric parameter | 2^-24 |
+| 4 | 13-20 | β_0 | Ionospheric parameter | 2^11 |
+| 4 | 21-22 | β_1[7:6] | Ionospheric parameter MSB | 2^14 |
+
+### Page 3 - Parameterы коррекции часов (part 1)
+
+| Word | Bits | Parameter | Description | Scale Factor |
+|-------|------|----------|----------|---------|
+| 1 | 1-11 | Preamble | 11100010010 | - |
+| 1 | 12-14 | FraID | ID subframe (001) | - |
+| 1 | 15-22 | SOW[19:12] | Seconds of Week MSB | 1 |
+| 2 | 1-4 | Pnum | Page number (0011) | - |
+| 2-3 | - | Reserved | - | - |
+| 4 | 1-12 | a_0[23:12] | Clock bias MSB | 2^-33 |
+
+### Page 4 - Parameterы коррекции часов (part 2) и ephemeris (part 1)
+
+| Word | Bits | Parameter | Description | Scale Factor |
+|-------|------|----------|----------|---------|
+| 1 | 1-11 | Preamble | 11100010010 | - |
+| 1 | 12-14 | FraID | ID subframe (001) | - |
+| 1 | 15-22 | SOW[19:12] | Seconds of Week MSB | 1 |
+| 2 | 1-4 | Pnum | Page number (0100) | - |
+| 2 | 5-10 | a_0[11:6] | Clock bias | 2^-33 |
+| 2 | 11-22 | a_1[21:10] | Clock drift MSB | 2^-50 |
+| 3 | 1-10 | a_1[9:0] | Clock drift LSB | 2^-50 |
+| 3 | 11-22 | a_2 | Speed дрейфа часов | 2^-66 |
+| 4 | 1 | a_2 (продолжение) | Speed дрейфа часов | 2^-66 |
+| 4 | 2-6 | IODE | Issue of Data Ephemeris | - |
+| 4 | 7-22 | Δn | Mean motion correction | π × 2^-43 |
+
+### Page 5 - Ephemeris (part 2)
+
+| Word | Bits | Parameter | Description | Scale Factor |
+|-------|------|----------|----------|---------|
+| 1 | 1-11 | Preamble | 11100010010 | - |
+| 1 | 12-14 | FraID | ID subframe (001) | - |
+| 1 | 15-22 | SOW[19:12] | Seconds of Week MSB | 1 |
+| 2 | 1-4 | Pnum | Page number (0101) | - |
+| 2 | 5-8 | C_uc[17:14] | Cosine harmonic correction latitude MSB | 2^-31 |
+| 2 | 9-22 | C_uc[13:0] | Cosine harmonic correction latitude LSB | 2^-31 |
+| 3 | 1-2 | M_0[31:30] | Mean anomaly MSB | π × 2^-31 |
+| 3 | 3-22 | M_0[29:10] | Mean anomaly | π × 2^-31 |
+| 4 | 1-8 | M_0[9:2] | Mean anomaly LSB | π × 2^-31 |
+| 4 | 9-22 | C_us[17:4] | Sine harmonic correction latitude MSB | 2^-31 |
+
+### Page 6 - Ephemeris (part 3)
+
+| Word | Bits | Parameter | Description | Scale Factor |
+|-------|------|----------|----------|---------|
+| 1 | 1-11 | Preamble | 11100010010 | - |
+| 1 | 12-14 | FraID | ID subframe (001) | - |
+| 1 | 15-22 | SOW[19:12] | Seconds of Week MSB | 1 |
+| 2 | 1-4 | Pnum | Page number (0110) | - |
+| 2 | 5-8 | C_us[3:0] | Sine harmonic correction latitude LSB | 2^-31 |
+| 2 | 9-18 | e[31:22] | Eccentricity MSB | 2^-33 |
+| 2 | 19-22 | e[21:18] | Eccentricity | 2^-33 |
+| 3 | 1-16 | e[17:2] | Eccentricity | 2^-33 |
+| 3 | 17-22 | sqrt(A)[31:26] | Square root of semi-major axis MSB | 2^-19 |
+| 4 | 1-22 | sqrt(A)[25:4] | Square root of semi-major axis | 2^-19 |
+
+### Page 7 - Ephemeris (part 4)
+
+| Word | Bits | Parameter | Description | Scale Factor |
+|-------|------|----------|----------|---------|
+| 1 | 1-11 | Preamble | 11100010010 | - |
+| 1 | 12-14 | FraID | ID subframe (001) | - |
+| 1 | 15-22 | SOW[19:12] | Seconds of Week MSB | 1 |
+| 2 | 1-4 | Pnum | Page number (0111) | - |
+| 2 | 5-8 | sqrt(A)[3:0] | Square root of semi-major axis LSB | 2^-19 |
+| 2 | 9-18 | C_ic[17:8] | Cosine harmonic correction inclination MSB | 2^-31 |
+| 2 | 19-22 | C_ic[7:4] | Cosine harmonic correction inclination | 2^-31 |
+| 3 | 1-2 | t_oe[16:15] | Ephemeris reference time MSB | 2^3 |
+| 3 | 3-18 | C_is | Sine harmonic correction inclination | 2^-31 |
+| 3 | 19-22 | t_oe[14:11] | Ephemeris reference time | 2^3 |
+| 4 | 1-7 | t_oe[10:4] | Ephemeris reference time | 2^3 |
+| 4 | 8-22 | i_0[31:17] | Inclination angle MSB | π × 2^-31 |
+
+### Page 8 - Ephemeris (part 5)
+
+| Word | Bits | Parameter | Description | Scale Factor |
+|-------|------|----------|----------|---------|
+| 1 | 1-11 | Preamble | 11100010010 | - |
+| 1 | 12-14 | FraID | ID subframe (001) | - |
+| 1 | 15-22 | SOW[19:12] | Seconds of Week MSB | 1 |
+| 2 | 1-4 | Pnum | Page number (1000) | - |
+| 2 | 5-10 | i_0[16:11] | Inclination angle | π × 2^-31 |
+| 2 | 11-22 | C_ic[3:0] | Cosine harmonic correction inclination LSB | 2^-31 |
+| 3 | 1 | C_rc[17] | Cosine harmonic correction radius MSB | 2^-6 |
+| 3 | 2-18 | C_rc[16:0] | Cosine harmonic correction radius | 2^-6 |
+| 3 | 19-22 | C_rs[17:14] | Sine harmonic correction radius MSB | 2^-6 |
+| 4 | 1-3 | C_rs[13:11] | Sine harmonic correction radius | 2^-6 |
+| 4 | 4-22 | Ω_dot[23:5] | Speed прямого восхождения MSB | π × 2^-43 |
+
+### Page 9 - Ephemeris (part 6)
+
+| Word | Bits | Parameter | Description | Scale Factor |
+|-------|------|----------|----------|---------|
+| 1 | 1-11 | Preamble | 11100010010 | - |
+| 1 | 12-14 | FraID | ID subframe (001) | - |
+| 1 | 15-22 | SOW[19:12] | Seconds of Week MSB | 1 |
+| 2 | 1-4 | Pnum | Page number (1001) | - |
+| 2 | 5-9 | Ω_dot[4:0] | Speed прямого восхождения LSB | π × 2^-43 |
+| 2 | 10 | Ω_0[31] | Right ascension MSB | π × 2^-31 |
+| 2 | 11-22 | C_rs[10:0] | Sine harmonic correction radius LSB | 2^-6 |
+| 3 | 1-22 | Ω_0[30:9] | Right ascension | π × 2^-31 |
+| 4 | 1-9 | Ω_0[8:0] | Right ascension LSB | π × 2^-31 |
+| 4 | 10-22 | ω[31:19] | Argument of perigee MSB | π × 2^-31 |
+
+### Page 10 - Ephemeris (part 7)
+
+| Word | Bits | Parameter | Description | Scale Factor |
+|-------|------|----------|----------|---------|
+| 1 | 1-11 | Preamble | 11100010010 | - |
+| 1 | 12-14 | FraID | ID subframe (001) | - |
+| 1 | 15-22 | SOW[19:12] | Seconds of Week MSB | 1 |
+| 2 | 1-4 | Pnum | Page number (1010) | - |
+| 2 | 5-9 | ω[18:14] | Argument of perigee | π × 2^-31 |
+| 2 | 10 | i_dot[13] | Speed изменения наклонения MSB | π × 2^-43 |
+| 2 | 11-22 | i_0[10:0] | Inclination angle LSB | π × 2^-31 |
+| 3 | 1-13 | i_dot[12:0] | Speed изменения наклонения LSB | π × 2^-43 |
+| 3 | 14-22 | ω[13:5] | Argument of perigee | π × 2^-31 |
+| 4 | 1-5 | ω[4:0] | Argument of perigee LSB | π × 2^-31 |
+
+## D2 Notes
+
+1. **Compactness**: D2 использует более компактное представление данных, распределяя параметры по 10 страницам
+2. **Speed**: Передается в 10 раз быстрее чем D1 (500 бит/сек против 50 бит/сек)
+3. **GEO specifics**: Оптимизировано для геостационарных спутников с минимальными изменениями орбиты
+4. **Interleaving**: Применяется ко всем словам кроме первого, как и в D1
+5. **BCH код**: Используется тот же (15,11,1) код Хэмминга для коррекции ошибок
+
+*MSB - Most Significant Bits, LSB - Least Significant Bits*
+
 ## BeiDou B-CNAV1 (B1C) - Detailed Structure
 
 ### General Parameters
