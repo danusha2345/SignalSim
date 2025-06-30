@@ -2,7 +2,7 @@
 
 ## Итоговая сводка
 - **Всего сигналов**: 17
-- **✅ Работают**: 6 (GPS L1CA, GPS L1C, GPS L2P, BeiDou B1I, BeiDou B1C, Galileo E1)
+- **✅ Работают**: 6 (GPS L1CA, GPS L1C, BeiDou B1I, BeiDou B1C, Galileo E1)
 - **⚠️ Требуют тестирования**: 10 (код корректный)
 - **❌ Не работают**: 1 (GPS L5)
 

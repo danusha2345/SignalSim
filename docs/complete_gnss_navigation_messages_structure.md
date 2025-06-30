@@ -863,38 +863,346 @@ Used for transmitting search and rescue service data.
 | B2A      | 1191.795        | Authorized        | ACE-BOC         | 200               | Limited access         |
 | B3A      | 1268.52         | Authorized        | BOC(15,2.5)     | 200               | Limited access         |
 
-### BeiDou B1I D1 NAV - Detailed Structure (Legacy Format)
+## BeiDou D1 Navigation Message (B1I/B2I/B3I for MEO/IGSO)
 
-#### General Parameters:
+### General Parameters
+- **Used by**: MEO and IGSO satellites (SVID 6-58)
+- **Signals**: B1I (1561.098 MHz), B2I (1207.14 MHz), B3I (1268.52 MHz)
 - **Data Rate**: 50 bits/sec
-- **Code Length**: 2046 chips
-- **Code Frequency**: 2.046 MHz
-- **Repetition Period**: 1 ms
-- **Modulation**: BPSK(2)
-- **Usage**: BeiDou-2 and early BeiDou-3 satellites
+- **Frame Duration**: 30 seconds (1500 bits)
+- **Subframe Duration**: 6 seconds (300 bits)
+- **Word Duration**: 0.6 seconds (30 bits)
+- **Modulation**: BPSK
+- **Error Correction**: BCH(15,11,1) Hamming code + Interleaving
 
-#### D1 Navigation Message Structure:
+### D1 Frame Structure
 
-**Superframe**: 12 minutes (36000 bits)
-- 24 frames of 30 sec each
+**Superframe**: 36,000 bits (12 minutes)
+- 24 frames × 1500 bits
 
-**Frame**: 30 seconds (1500 bits)
-- 5 subframes of 6 sec each
+**Frame**: 1500 bits (30 seconds)
+- 5 subframes × 300 bits
 
-**Subframe**: 6 seconds (300 bits)
-- 10 words of 30 bits each
+**Subframe**: 300 bits (6 seconds)
+- 10 words × 30 bits
 
-**Word**: 30 bits
-- 22 data bits + 8 parity bits (BCH)
+**Word**: 30 bits (0.6 seconds)
+- 22 bits information + 4 bits BCH + 4 bits reserved
 
-### BeiDou B1I D2 NAV - Detailed Structure (for GEO)
+### D1 Subframe Allocation
 
-#### General Parameters:
+| Subframe | Pages | Content |
+|----------|-------|---------|
+| 1 | - | Basic navigation parameters |
+| 2 | - | Ephemeris data part 1 |
+| 3 | - | Ephemeris data part 2 |
+| 4 | 1-24 | Almanac for satellites 1-24 |
+| 5 | 1-6 | Almanac for satellites 25-30 |
+| 5 | 7-10 | Ionospheric, UTC, health |
+| 5 | 11-23 | Almanac for satellites 31-63 |
+| 5 | 24 | Health status |
+
+### D1 Detailed Word Structure
+
+#### Subframe 1 - Basic Navigation Parameters
+
+| Word | Bits | Parameter | Description | Scale Factor |
+|------|------|-----------|-------------|--------------|
+| 1 | 1-11 | Preamble | 11100010010 | - |
+| 1 | 12-14 | FraID | Subframe ID (001) | - |
+| 1 | 15-22 | SOW[19:12] | Seconds of Week MSB | 1 |
+| 1 | 23-26 | BCH | Error correction | - |
+| 1 | 27-30 | Reserved | - | - |
+| 2 | 1-12 | SOW[11:0] | Seconds of Week LSB | 1 |
+| 2 | 13 | SatH1 | Satellite health | - |
+| 2 | 14-18 | IODC | Issue of Data Clock | - |
+| 2 | 19-22 | URAI | User Range Accuracy Index | - |
+| 3 | 1-13 | WN | Week Number | 1 |
+| 3 | 14-22 | t_oc[16:8] | Clock reference time MSB | 2^3 |
+| 4 | 1-8 | t_oc[7:0] | Clock reference time LSB | 2^3 |
+| 4 | 9-18 | TGD1 | Group Delay B1I | 0.1 ns |
+| 4 | 19-22 | TGD2[9:6] | Group Delay B2I MSB | 0.1 ns |
+| 5 | 1-6 | TGD2[5:0] | Group Delay B2I LSB | 0.1 ns |
+| 5 | 7-14 | α_0 | Ionospheric parameter | 2^-30 |
+| 5 | 15-22 | α_1 | Ionospheric parameter | 2^-27 |
+| 6 | 1-8 | α_2 | Ionospheric parameter | 2^-24 |
+| 6 | 9-16 | α_3 | Ionospheric parameter | 2^-24 |
+| 6 | 17-22 | β_0[7:2] | Ionospheric parameter MSB | 2^11 |
+| 7 | 1-2 | β_0[1:0] | Ionospheric parameter LSB | 2^11 |
+| 7 | 3-10 | β_1 | Ionospheric parameter | 2^14 |
+| 7 | 11-18 | β_2 | Ionospheric parameter | 2^16 |
+| 7 | 19-22 | β_3[7:4] | Ionospheric parameter MSB | 2^16 |
+| 8 | 1-4 | β_3[3:0] | Ionospheric parameter LSB | 2^16 |
+| 8 | 5-15 | a_2 | Clock drift rate | 2^-66 |
+| 8 | 16-22 | a_0[23:17] | Clock bias MSB | 2^-33 |
+| 9 | 1-17 | a_0[16:0] | Clock bias LSB | 2^-33 |
+| 9 | 18-22 | a_1[21:17] | Clock drift MSB | 2^-50 |
+| 10 | 1-17 | a_1[16:0] | Clock drift LSB | 2^-50 |
+| 10 | 18-22 | AODE | Age of Data Ephemeris | - |
+
+#### Subframe 2 - Ephemeris Data Part 1
+
+| Word | Bits | Parameter | Description | Scale Factor |
+|------|------|-----------|-------------|--------------|
+| 1 | 1-11 | Preamble | 11100010010 | - |
+| 1 | 12-14 | FraID | Subframe ID (010) | - |
+| 1 | 15-22 | SOW[19:12] | Seconds of Week MSB | 1 |
+| 2 | 1-10 | Δn[15:6] | Mean motion correction MSB | π × 2^-43 |
+| 3 | 1-6 | Δn[5:0] | Mean motion correction LSB | π × 2^-43 |
+| 3 | 7-22 | C_uc | Cosine harmonic correction | 2^-31 |
+| 4 | 1-2 | C_uc | Cosine harmonic correction | 2^-31 |
+| 4 | 3-22 | M_0[31:12] | Mean anomaly MSB | π × 2^-31 |
+| 5 | 1-12 | M_0[11:0] | Mean anomaly LSB | π × 2^-31 |
+| 5 | 13-22 | e[31:22] | Eccentricity MSB | 2^-33 |
+| 6-7 | All | e[21:0] | Eccentricity LSB | 2^-33 |
+| 8 | 1-18 | C_us | Sine harmonic correction | 2^-31 |
+| 8 | 19-22 | C_rc[17:14] | Cosine harmonic radius MSB | 2^-6 |
+| 9 | 1-14 | C_rc[13:0] | Cosine harmonic radius LSB | 2^-6 |
+| 9 | 15-22 | C_rs[17:10] | Sine harmonic radius MSB | 2^-6 |
+| 10 | 1-10 | C_rs[9:0] | Sine harmonic radius LSB | 2^-6 |
+| 10 | 11-22 | sqrt(A)[31:20] | Square root of semi-major axis MSB | 2^-19 |
+
+#### Subframe 3 - Ephemeris Data Part 2
+
+| Word | Bits | Parameter | Description | Scale Factor |
+|------|------|-----------|-------------|--------------|
+| 1 | 1-11 | Preamble | 11100010010 | - |
+| 1 | 12-14 | FraID | Subframe ID (011) | - |
+| 1 | 15-22 | SOW[19:12] | Seconds of Week MSB | 1 |
+| 2 | 1-10 | t_oe[9:0] | Ephemeris reference time | 2^3 |
+| 3 | 1-5 | t_oe[4:0] | Ephemeris reference time | 2^3 |
+| 3 | 6-22 | i_0[31:15] | Inclination angle MSB | π × 2^-31 |
+| 4 | 1-15 | i_0[14:0] | Inclination angle LSB | π × 2^-31 |
+| 4 | 16-22 | C_ic[17:11] | Cosine harmonic inclination MSB | 2^-31 |
+| 5 | 1-11 | C_ic[10:0] | Cosine harmonic inclination LSB | 2^-31 |
+| 5 | 12-22 | Ω_dot[23:13] | Rate of right ascension MSB | π × 2^-43 |
+| 6 | 1-13 | Ω_dot[12:0] | Rate of right ascension LSB | π × 2^-43 |
+| 6 | 14-22 | C_is[17:9] | Sine harmonic inclination MSB | 2^-31 |
+| 7 | 1-9 | C_is[8:0] | Sine harmonic inclination LSB | 2^-31 |
+| 7 | 10-22 | IDOT[13:1] | Rate of inclination angle MSB | π × 2^-43 |
+| 8 | 1 | IDOT[0] | Rate of inclination angle LSB | π × 2^-43 |
+| 8 | 2-22 | Ω_0[31:11] | Right ascension MSB | π × 2^-31 |
+| 9 | 1-11 | Ω_0[10:0] | Right ascension LSB | π × 2^-31 |
+| 9 | 12-22 | ω[31:21] | Argument of perigee MSB | π × 2^-31 |
+| 10 | 1-21 | ω[20:0] | Argument of perigee LSB | π × 2^-31 |
+
+## BeiDou D2 Navigation Message (B1I/B2I/B3I for GEO)
+
+### General Parameters
+- **Used by**: GEO satellites (SVID 1-5, 59-63)
+- **Signals**: B1I (1561.098 MHz), B2I (1207.14 MHz), B3I (1268.52 MHz)
 - **Data Rate**: 500 bits/sec
-- **Message Period**: 0.6 seconds (300 bits)
-- **Modulation**: BPSK(2)
-- **Usage**: GEO satellites only
+- **Frame Duration**: 3 seconds (1500 bits)
+- **Subframe Duration**: 0.6 seconds (300 bits)
+- **Word Duration**: 0.06 seconds (30 bits)
+- **Modulation**: BPSK
+- **Error Correction**: BCH(15,11,1) + Interleaving
 
+### D2 Frame Structure
+
+**Superframe**: 180,000 bits (6 minutes)
+- 120 frames × 1500 bits
+
+**Frame**: 1500 bits (3 seconds)
+- 5 subframes × 300 bits
+
+**Subframe**: 300 bits (0.6 seconds)
+- 10 words × 30 bits
+
+### D2 Subframe Allocation
+
+| Subframe | Pages | Content |
+|----------|-------|---------|
+| 1 | 1-10 | Navigation message (10 pages) |
+| 2 | - | Integrity and differential correction |
+| 3 | - | Reserved |
+| 4 | - | Reserved |
+| 5 | - | Reserved |
+
+### D2 Navigation Message Pages (Subframe 1)
+
+| Page | Content |
+|------|---------|
+| 1 | Basic navigation parameters, health, IODC |
+| 2 | Ionospheric parameters |
+| 3 | Clock correction parameters (part 1) |
+| 4 | Clock correction parameters (part 2), ephemeris (part 1) |
+| 5 | Ephemeris (part 2) |
+| 6 | Ephemeris (part 3) |
+| 7 | Ephemeris (part 4) |
+| 8 | Ephemeris (part 5) |
+| 9 | Ephemeris (part 6) |
+| 10 | Ephemeris (part 7) |
+
+## BeiDou B-CNAV1 (B1C) - Detailed Structure
+
+### General Parameters
+- **Frequency**: 1575.42 MHz
+- **Data Rate**: 100 symbols/sec
+- **Frame Duration**: 18 seconds (1800 symbols)
+- **Modulation**: Data: BOC(1,1), Pilot: QMBOC(6,1,4/33)
+- **Power Split**: 25% data, 75% pilot
+- **FEC**: LDPC(64,56) + BCH(21,6)
+- **Interleaving**: Block interleaving
+
+### B-CNAV1 Frame Structure
+
+**Frame**: 1800 symbols
+- **Subframe 1**: 72 symbols (0.72 sec) - Fixed content
+- **Subframe 2**: 1200 symbols (12 sec) - Variable content
+- **Subframe 3**: 528 symbols (5.28 sec) - FEC
+
+### B-CNAV1 Subframe 1 Structure
+
+| Symbols | Parameter | Description | Value/Range |
+|---------|-----------|-------------|-------------|
+| 1-24 | PRE | Preamble | 0xEB90F1 |
+| 25-30 | PRN | Satellite PRN | 1-63 |
+| 31-38 | SOH | Seconds of Hour | 0-3599 |
+| 39-41 | Reserved | - | 0 |
+| 42-48 | HEOAA | Hour/Ephemeris/Others/Almanac Age | Variable |
+| 49-55 | HAI | Health/Accuracy/Integrity | Variable |
+| 56-59 | Reserved | - | 0 |
+| 60-65 | BCH | Error correction | - |
+| 66-72 | Reserved | - | 0 |
+
+### B-CNAV1 Message Types
+
+#### Message Type 10 - Ephemeris (Most Common)
+
+| Bits | Parameter | Description | Scale Factor | Units |
+|------|-----------|-------------|--------------|-------|
+| 1-6 | MesType | Message type = 10 | - | - |
+| 7-24 | SOW | Seconds of BDT week | 1 | s |
+| 25-37 | WN | BDT week number | 1 | week |
+| 38-46 | URAED_Index | User Range Accuracy | - | index |
+| 47-54 | t_oe | Reference time of ephemeris | 300 | s |
+| 55-86 | sqrt(A) | Square root of semi-major axis | 2^-6 | m^0.5 |
+| 87-118 | e | Eccentricity | 2^-34 | - |
+| 119-150 | ω | Argument of perigee | 2^-32 | semicircles |
+| 151-167 | Δn_0 | Mean motion difference | 2^-44 | semicircles/s |
+| 168-199 | M_0 | Mean anomaly at t_oe | 2^-32 | semicircles |
+| 200-231 | Ω_0 | Longitude of ascending node | 2^-32 | semicircles |
+| 232-263 | i_0 | Inclination angle at t_oe | 2^-32 | semicircles |
+| 264-281 | Ω_dot | Rate of right ascension | 2^-44 | semicircles/s |
+| 282-296 | i_dot | Rate of inclination angle | 2^-44 | semicircles/s |
+| 297-314 | C_is | Sine harmonic correction inclination | 2^-30 | rad |
+| 315-332 | C_ic | Cosine harmonic correction inclination | 2^-30 | rad |
+| 333-350 | C_rs | Sine harmonic correction radius | 2^-6 | m |
+| 351-368 | C_rc | Cosine harmonic correction radius | 2^-6 | m |
+| 369-386 | C_us | Sine harmonic correction latitude | 2^-30 | rad |
+| 387-404 | C_uc | Cosine harmonic correction latitude | 2^-30 | rad |
+| 405-422 | a_dot | Semi-major axis rate | 2^-20 | m/s |
+| 423-433 | Δn_0dot | Rate of mean motion difference | 2^-57 | semicircles/s^2 |
+| 434-450 | t_oc | Clock data reference time | 300 | s |
+| 451-477 | a_0 | Satellite clock bias | 2^-33 | s |
+| 478-500 | a_1 | Satellite clock drift | 2^-50 | s/s |
+| 501-512 | a_2 | Satellite clock drift rate | 2^-66 | s/s^2 |
+
+#### Message Type 11 - Clock Corrections
+
+| Bits | Parameter | Description | Scale Factor | Units |
+|------|-----------|-------------|--------------|-------|
+| 1-6 | MesType | Message type = 11 | - | - |
+| 7-24 | SOW | Seconds of BDT week | 1 | s |
+| 25-37 | WN | BDT week number | 1 | week |
+| 38-55 | t_oc | Clock data reference time | 300 | s |
+| 56-82 | a_0 | Satellite clock bias | 2^-33 | s |
+| 83-105 | a_1 | Satellite clock drift | 2^-50 | s/s |
+| 106-117 | a_2 | Satellite clock drift rate | 2^-66 | s/s^2 |
+| 118-127 | TGD_B1Cp | Group delay B1C pilot | 2^-33 | s |
+| 128-137 | TGD_B1Cd | Group delay B1C data | 2^-33 | s |
+| 138-147 | TGD_B2ap | Group delay B2a pilot | 2^-33 | s |
+| 148-157 | TGD_B2bi | Group delay B2b | 2^-33 | s |
+| 158-167 | ISC_B1Cd | Inter-signal correction B1C data | 2^-33 | s |
+| 168-177 | ISC_B2ad | Inter-signal correction B2a data | 2^-33 | s |
+
+#### Message Type 30 - Ionosphere Parameters
+
+| Bits | Parameter | Description | Scale Factor | Units |
+|------|-----------|-------------|--------------|-------|
+| 1-6 | MesType | Message type = 30 | - | - |
+| 7-8 | IonoCorrectionType | 00=Klobuchar, 01=BDGIM | - | - |
+| 9-16 | α_0 | Ionospheric parameter | 2^-30 | s |
+| 17-24 | α_1 | Ionospheric parameter | 2^-27 | s/semicircle |
+| 25-32 | α_2 | Ionospheric parameter | 2^-24 | s/semicircle^2 |
+| 33-40 | α_3 | Ionospheric parameter | 2^-24 | s/semicircle^3 |
+| 41-48 | β_0 | Ionospheric parameter | 2^11 | s |
+| 49-56 | β_1 | Ionospheric parameter | 2^14 | s/semicircle |
+| 57-64 | β_2 | Ionospheric parameter | 2^16 | s/semicircle^2 |
+| 65-72 | β_3 | Ionospheric parameter | 2^16 | s/semicircle^3 |
+
+## BeiDou B-CNAV2 (B2a) - Detailed Structure
+
+### General Parameters
+- **Frequency**: 1176.45 MHz
+- **Data Rate**: 200 symbols/sec
+- **Frame Duration**: 3 seconds (600 symbols)
+- **Modulation**: QPSK(10)
+- **Power Split**: 50% data, 50% pilot
+- **FEC**: LDPC(96,72)
+
+### B-CNAV2 Frame Structure
+
+**Frame**: 600 symbols
+- **Preamble**: 24 symbols
+- **Data**: 432 symbols
+- **FEC**: 144 symbols
+
+### B-CNAV2 Message Types
+
+Uses same message types as B-CNAV1 but with optimized encoding:
+- More frequent ephemeris updates (every 3 seconds possible)
+- Higher data rate allows faster acquisition
+- Enhanced FEC for better performance
+
+## BeiDou B-CNAV3 (B2b) - Detailed Structure
+
+### General Parameters
+- **Frequency**: 1207.14 MHz
+- **Data Rate**: 1000 symbols/sec (500 bits/sec)
+- **Frame Duration**: 1 second
+- **Modulation**: BPSK(1)
+- **Purpose**: PPP-B2b high-precision service
+- **FEC**: LDPC
+
+### B-CNAV3 Frame Structure
+
+**Frame**: 1000 symbols
+- Contains PPP corrections and integrity information
+- Designed for real-time precise positioning
+
+### B-CNAV3 Message Types
+
+| Type | Content | Update Rate |
+|------|---------|-------------|
+| 1 | Orbit corrections | 6 seconds |
+| 2 | Clock corrections | 6 seconds |
+| 3 | Code biases | 30 seconds |
+| 4 | Phase biases | 30 seconds |
+| 5 | VTEC corrections | 30 seconds |
+| 6 | Integrity information | 6 seconds |
+
+## Implementation Notes
+
+### BCH Encoding (D1/D2)
+- Generator polynomial: g(x) = x^4 + x + 1
+- Systematic code: information bits unchanged
+- Applied to each 30-bit word
+
+### Interleaving (D1/D2)
+- Applied to all words except the first in each subframe
+- Bit position mapping: i → ((i mod 30) × 30 + i/30)
+
+### LDPC Encoding (B-CNAV)
+- B1C: LDPC(64,56) - 8 parity bits
+- B2a: LDPC(96,72) - 24 parity bits
+- Provides better error correction than BCH
+
+### Secondary Codes
+- B1C pilot: 1800-bit secondary code
+- B2a pilot: 100-bit secondary code
+- B2b: No secondary code
 ### BeiDou B-CNAV1 (B1C) - Detailed Structure
 
 #### General Parameters:
