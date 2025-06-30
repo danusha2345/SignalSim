@@ -1345,6 +1345,10 @@ Uses same message types as B-CNAV1 but with optimized encoding:
 
 ### B-CNAV3 Message Types
 
+B-CNAV3 supports different message types for various applications:
+
+**PPP (Precise Point Positioning) Message Types:**
+
 | Type | Content | Update Rate |
 |------|---------|-------------|
 | 1 | Orbit corrections | 6 seconds |
@@ -1353,6 +1357,197 @@ Uses same message types as B-CNAV1 but with optimized encoding:
 | 4 | Phase biases | 30 seconds |
 | 5 | VTEC corrections | 30 seconds |
 | 6 | Integrity information | 6 seconds |
+
+**Standard Navigation Message Types:**
+
+| Type | Content | Size |
+|------|---------|------|
+| 10 | Ephemeris and clock corrections | 968 bits |
+| 11 | Ionospheric parameters | 264 bits |
+| 12 | Reduced ephemeris | 608 bits |
+| 30 | ISM differential corrections | variable |
+| 31 | Clock corrections | 264 bits |
+| 32 | EOP parameters | 528 bits |
+| 33 | UTC parameters | 424 bits |
+| 34 | Text message | variable |
+| 63 | Null message | min. 8 bits |
+
+#### B-CNAV3 Message Types - Detailed Structure
+
+**Type 10 - Ephemeris and Clock Corrections (968 bits):**
+
+| Bits | Parameter | Description | Scale/Units |
+|------|-----------|-------------|-------------|
+| 1-6 | PRN | Satellite PRN number | - |
+| 7-17 | WN | BeiDou week number | weeks |
+| 18-25 | IODC | Issue of Data Clock | - |
+| 26-33 | IODE | Issue of Data Ephemeris | - |
+| 34-48 | toc | Clock correction reference time | 300 s |
+| 49-73 | af0 | Satellite clock offset | 2^-34 s |
+| 74-95 | af1 | Satellite clock drift | 2^-50 s/s |
+| 96-112 | af2 | Satellite clock drift rate | 2^-66 s/s² |
+| 113-119 | TGD_B1Cp | B1C pilot group delay | 10^-10 s |
+| 120-126 | TGD_B1Cd | B1C data group delay | 10^-10 s |
+| 127-133 | TGD_B2ap | B2a pilot group delay | 10^-10 s |
+| 134-140 | TGD_B2bp | B2b pilot group delay | 10^-10 s |
+| 141-153 | ISC_B1Cd | B1C inter-signal correction | 2^-35 s |
+| 154-166 | ISC_B2ad | B2a inter-signal correction | 2^-35 s |
+| 167-183 | toe | Ephemeris reference time | 300 s |
+| 184-215 | M0 | Mean anomaly | 2^-31 semicircles |
+| 216-233 | e | Eccentricity | 2^-33 |
+| 234-265 | sqrt(A) | Square root of semi-major axis | 2^-19 m^1/2 |
+| 266-297 | Ω0 | Longitude of ascending node | 2^-31 semicircles |
+| 298-329 | i0 | Inclination angle | 2^-31 semicircles |
+| 330-361 | ω | Argument of perigee | 2^-31 semicircles |
+| 362-385 | Ω̇ | Rate of ascending node | 2^-43 semicircles/s |
+| 386-400 | iDOT | Rate of inclination angle | 2^-43 semicircles/s |
+| 401-416 | Δn | Mean motion correction | 2^-43 semicircles/s |
+| 417-433 | Cuc | Cosine harmonic correction to argument of latitude | 2^-31 rad |
+| 434-450 | Cus | Sine harmonic correction to argument of latitude | 2^-31 rad |
+| 451-469 | Crc | Cosine harmonic correction to orbit radius | 2^-6 m |
+| 470-488 | Crs | Sine harmonic correction to orbit radius | 2^-6 m |
+| 489-507 | Cic | Cosine harmonic correction to inclination | 2^-31 rad |
+| 508-526 | Cis | Sine harmonic correction to inclination | 2^-31 rad |
+| 527-968 | Reserved | - | - |
+
+**Type 11 - Ionospheric Parameters (264 bits):**
+
+| Bits | Parameter | Description | Scale/Units |
+|------|-----------|-------------|-------------|
+| 1-6 | PRN | Satellite PRN number | - |
+| 7-14 | α0 | Alpha coefficient 0 | 2^-30 s |
+| 15-22 | α1 | Alpha coefficient 1 | 2^-27 s/semicircle |
+| 23-30 | α2 | Alpha coefficient 2 | 2^-24 s/semicircle² |
+| 31-38 | α3 | Alpha coefficient 3 | 2^-24 s/semicircle³ |
+| 39-46 | β0 | Beta coefficient 0 | 2^11 s |
+| 47-54 | β1 | Beta coefficient 1 | 2^14 s/semicircle |
+| 55-62 | β2 | Beta coefficient 2 | 2^16 s/semicircle² |
+| 63-70 | β3 | Beta coefficient 3 | 2^16 s/semicircle³ |
+| 71-264 | Reserved | - | - |
+
+**Type 12 - Reduced Ephemeris (608 bits):**
+
+| Bits | Parameter | Description | Scale/Units |
+|------|-----------|-------------|-------------|
+| 1-6 | PRN | Satellite PRN number | - |
+| 7-17 | WN | BeiDou week number | weeks |
+| 18-28 | toa | Almanac reference time | 2^12 s |
+| 29-36 | IODA | Issue of Data Almanac | - |
+| 37-61 | δA | Semi-major axis difference | 2^-9 m |
+| 62-78 | A-DOT | Semi-major axis rate | 2^-21 m/s |
+| 79-95 | δn0 | Mean motion correction | 2^-44 semicircles/s |
+| 96-112 | δn0-DOT | Mean motion rate | 2^-57 semicircles/s² |
+| 113-139 | M0 | Mean anomaly | 2^-32 semicircles |
+| 140-157 | e | Eccentricity | 2^-21 |
+| 158-184 | ω | Argument of perigee | 2^-32 semicircles |
+| 185-211 | Ω0 | Longitude of ascending node | 2^-32 semicircles |
+| 212-229 | i0 | Inclination angle | 2^-19 semicircles |
+| 230-248 | Ω̇ | Rate of ascending node | 2^-45 semicircles/s |
+| 249-263 | δi | Inclination correction | 2^-44 semicircles/s |
+| 264-277 | Cis | Sine harmonic correction to inclination | 2^-30 rad |
+| 278-291 | Cic | Cosine harmonic correction to inclination | 2^-30 rad |
+| 292-307 | Crs | Sine harmonic correction to orbit radius | 2^-8 m |
+| 308-323 | Crc | Cosine harmonic correction to orbit radius | 2^-8 m |
+| 324-339 | Cus | Sine harmonic correction to argument of latitude | 2^-30 rad |
+| 340-355 | Cuc | Cosine harmonic correction to argument of latitude | 2^-30 rad |
+| 356-366 | af0 | Satellite clock offset | 2^-20 s |
+| 367-376 | af1 | Satellite clock drift | 2^-38 s/s |
+| 377-608 | Reserved | - | - |
+
+**Type 30 - ISM Differential Corrections (variable):**
+
+| Bits | Parameter | Description | Scale/Units |
+|------|-----------|-------------|-------------|
+| 1-6 | PRN | Satellite PRN number | - |
+| 7-8 | UD index | User differential range accuracy index | - |
+| 9-17 | IODC | Issue of Data Clock | - |
+| 18-26 | IODE | Issue of Data Ephemeris | - |
+| 27-41 | Δaf0 | Delta clock offset | 2^-35 s |
+| 42-55 | Δaf1 | Delta clock drift | 2^-51 s/s |
+| 56-78 | ΔOrb_R | Radial orbit correction | 0.125 m |
+| 79-98 | ΔOrb_T | Along-track orbit correction | 0.015625 m |
+| 99-118 | ΔOrb_N | Cross-track orbit correction | 0.0625 m |
+| 119-135 | ΔOrb_Ṙ | Radial orbit rate correction | 0.001 m/s |
+| 136-152 | ΔOrb_Ṫ | Along-track orbit rate correction | 0.001 m/s |
+| 153-169 | ΔOrb_Ṅ | Cross-track orbit rate correction | 0.001 m/s |
+| 170+ | Additional data | Implementation specific | - |
+
+**Type 31 - Clock Corrections (264 bits):**
+
+| Bits | Parameter | Description | Scale/Units |
+|------|-----------|-------------|-------------|
+| 1-6 | PRN | Satellite PRN number | - |
+| 7-17 | WN | BeiDou week number | weeks |
+| 18-25 | IODC | Issue of Data Clock | - |
+| 26-48 | toc | Clock correction reference time | 300 s |
+| 49-73 | af0 | Satellite clock offset | 2^-34 s |
+| 74-95 | af1 | Satellite clock drift | 2^-50 s/s |
+| 96-112 | af2 | Satellite clock drift rate | 2^-66 s/s² |
+| 113-119 | TGD_B1Cp | B1C pilot group delay | 10^-10 s |
+| 120-126 | TGD_B1Cd | B1C data group delay | 10^-10 s |
+| 127-133 | TGD_B2ap | B2a pilot group delay | 10^-10 s |
+| 134-140 | TGD_B2bp | B2b pilot group delay | 10^-10 s |
+| 141-153 | ISC_B1Cd | B1C inter-signal correction | 2^-35 s |
+| 154-166 | ISC_B2ad | B2a inter-signal correction | 2^-35 s |
+| 167-264 | Reserved | - | - |
+
+**Type 32 - EOP Parameters (528 bits):**
+
+| Bits | Parameter | Description | Scale/Units |
+|------|-----------|-------------|-------------|
+| 1-6 | PRN | Satellite PRN number | - |
+| 7-21 | teop | EOP reference time | 2^4 s |
+| 22-23 | PM source | Polar motion data source | - |
+| 24-44 | xp | X pole coordinate | 2^-20 arc seconds |
+| 45-65 | yp | Y pole coordinate | 2^-20 arc seconds |
+| 66-80 | ẋp | X pole rate | 2^-21 arc seconds/day |
+| 81-95 | ẏp | Y pole rate | 2^-21 arc seconds/day |
+| 96-126 | UT1-UTC | UT1-UTC difference | 2^-24 s |
+| 127-145 | UT1-UTC rate | UT1-UTC rate | 2^-25 s/day |
+| 146-159 | Δt_LS | Current leap second | s |
+| 160-167 | WN_LSF | Week of next leap second | weeks |
+| 168-175 | DN_LSF | Day of next leap second | days |
+| 176-189 | Δt_LSF | Next leap second value | s |
+| 190-528 | Reserved | - | - |
+
+**Type 33 - UTC Parameters (424 bits):**
+
+| Bits | Parameter | Description | Scale/Units |
+|------|-----------|-------------|-------------|
+| 1-6 | PRN | Satellite PRN number | - |
+| 7-32 | A0_UTC | UTC offset | 2^-30 s |
+| 33-56 | A1_UTC | UTC drift | 2^-50 s/s |
+| 57-64 | A2_UTC | UTC quadratic term | 2^-68 s/s² |
+| 65-72 | Δt_LS | Current leap second | s |
+| 73-80 | tot | UTC parameters reference time | 2^12 s |
+| 81-88 | WNot | Week of tot | weeks |
+| 89-96 | WN_LSF | Week of next leap second | weeks |
+| 97-104 | DN | Day of next leap second | days |
+| 105-112 | Δt_LSF | Next leap second value | s |
+| 113-136 | A0_GPS | GPS-BDT offset | 2^-30 s |
+| 137-152 | A1_GPS | GPS-BDT drift | 2^-50 s/s |
+| 153-168 | A0_GLO | GLONASS-BDT offset | 2^-30 s |
+| 169-184 | A1_GLO | GLONASS-BDT drift | 2^-50 s/s |
+| 185-200 | A0_GAL | Galileo-BDT offset | 2^-30 s |
+| 201-216 | A1_GAL | Galileo-BDT drift | 2^-50 s/s |
+| 217-424 | Reserved | - | - |
+
+**Type 34 - Text Message (variable):**
+
+| Bits | Parameter | Description | Scale/Units |
+|------|-----------|-------------|-------------|
+| 1-6 | PRN | Satellite PRN number | - |
+| 7-8 | Source ID | Message source identifier | - |
+| 9-16 | Page number | Message page number | - |
+| 17-24 | Total pages | Total number of pages | - |
+| 25+ | Text | UTF-8 encoded text | - |
+
+**Type 63 - Null Message (minimum 8 bits):**
+
+| Bits | Parameter | Description |
+|------|----------|----------|
+| 1-6 | PRN | Satellite PRN number |
+| 7+ | Padding | Zero padding |
 
 ## Implementation Notes
 
