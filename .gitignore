@@ -5,3 +5,4 @@ usrp_player/uhd_sc8_tx_stream
 CLAUDE.md
 *.backup
 *.py
+/.claude
