@@ -627,14 +627,23 @@ BOOL DecodeEphOrbit(NavDataType DataType, char *str, FILE *fp_nav, PGLONASS_EPHE
 	DataType = NavDataGlonassFdma;
 	Eph->n = svid;
 	Eph->freq = (signed char)data[10];
-	FrameTime = (int)(data[2] + 3 * 3600 + 15) / 30;
-	FrameTime = FrameTime % 2880;
-	Eph->tk = (unsigned short)(((FrameTime / 120) << 7) + (FrameTime % 120));
-	Eph->P = (Eph->tk & 1) ? 0xc4 : 0xc0;		// P=11, ln=0, P4=0, P3=0 (determined by frame number), P2=LSB of tb, P1=00
+	// data[2] contains tk - time of frame beginning in seconds from start of day (Moscow time)
+	// Convert to GLONASS tk format: hour(5 bits):minute(6 bits):second/30(1 bit)
+	int tk_seconds = (int)data[2];
+	int hours = tk_seconds / 3600;
+	int minutes = (tk_seconds % 3600) / 60;
+	int half_minutes = (tk_seconds % 60) / 30;
+	Eph->tk = (unsigned short)((hours << 7) | (minutes << 1) | half_minutes);
+	// P field depends on tb (reference time), not tk
+	// We'll set P field properly after tb is calculated
+	Eph->P = 0xc0;  // P=11, ln=0, P4=0, P3=0, P2=0, P1=00 (will update P2 after tb)
 	Eph->M = 1;		// assume GLONASS-M satellite
 	Eph->Ft = 0;	// no data
 	Eph->day = (unsigned short)(eph_time.Day);
 	Eph->tb = ((int)(eph_time.MilliSeconds) + 450000) / 900000 * 900;	// when align to 900 second, leap second bias eleminated
+	// Update P2 bit based on tb (P2 = 1 if tb interval number is odd)
+	if ((Eph->tb / 900) & 1)
+		Eph->P |= 0x04;  // Set P2 bit
 	Eph->Bn = (unsigned char)data[6];
 	Eph->En = (unsigned char)data[14];
 	Eph->tn = -data[0];

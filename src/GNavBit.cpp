@@ -126,8 +126,13 @@ int GNavBit::ComposeStringEph(PGLONASS_EPHEMERIS Ephemeris, unsigned int String[
 	unsigned int UintValue;
 
 	// string 1
-	String[0][0] = (1 << 16) | COMPOSE_BITS(Ephemeris->P, 12, 2);
-	String[0][0] |= COMPOSE_BITS(Ephemeris->tk, 0, 12);
+	String[0][0] = (1 << 16);  // m = 1 (string number)
+	String[0][0] |= COMPOSE_BITS(Ephemeris->P >> 1, 12, 1);  // P1 bit (bit 8)
+	// tk in bits 9-20 according to GLONASS ICD
+	// tk format in Ephemeris->tk: hour(5 bits in 11:7):minute(6 bits in 6:1):second/30(1 bit in 0)
+	// String[0][0] bits mapping: bits 31:20 = string number, bits 19:0 = nav message bits 1-20
+	// tk should be in nav message bits 9-20, which maps to word bits 11:0
+	String[0][0] |= COMPOSE_BITS(Ephemeris->tk, 0, 12);  // tk in bits 9-20 (word bits 11:0)
 	UintValue = UnscaleUint(fabs(Ephemeris->vx) / 1000, -20); UintValue |= (Ephemeris->vx < 0) ? (1 << 23) : 0;
 	String[0][1] = COMPOSE_BITS(UintValue, 8, 24);
 	UintValue = UnscaleUint(fabs(Ephemeris->ax) / 1000, -30); UintValue |= (Ephemeris->ax < 0) ? (1 << 4) : 0;
@@ -135,13 +140,24 @@ int GNavBit::ComposeStringEph(PGLONASS_EPHEMERIS Ephemeris, unsigned int String[
 	UintValue = UnscaleUint(fabs(Ephemeris->x) / 1000, -11); UintValue |= (Ephemeris->x < 0) ? (1 << 26) : 0;
 	String[0][1] |= COMPOSE_BITS(UintValue >> 24, 0, 3);
 	String[0][2] = COMPOSE_BITS(UintValue, 8, 24);
+	// Bn in bits 74-80 (7 bits) 
+	String[0][2] |= COMPOSE_BITS(Ephemeris->Bn & 0x7, 5, 3);  // Bn bits 74-76 (first 3 bits)
+	// Note: Bn continues in string 2
+	// P2 in bits 81-85 - depends on tb parity
+	unsigned int P2 = (Ephemeris->tb % 2) ? 0x15 : 0x0a;  // 10101 for odd, 01010 for even
+	String[0][2] |= COMPOSE_BITS(P2, 0, 5);  // P2 bits 81-85
 	// string 2
-	String[1][0] = (2 << 16) | COMPOSE_BITS(Ephemeris->Bn, 13, 3);
-	String[1][0] |= COMPOSE_BITS(Ephemeris->P >> 2, 12, 1);
+	String[1][0] = (2 << 16) | COMPOSE_BITS(Ephemeris->Bn >> 3, 15, 3);  // Bn bits 5-7
+	String[1][0] |= COMPOSE_BITS(Ephemeris->P >> 2, 12, 1);  // P bit 8
 	UintValue = Ephemeris->tb / 900;
-	String[1][0] |= COMPOSE_BITS(UintValue, 5, 7);
+	String[1][0] |= COMPOSE_BITS(UintValue >> 5, 10, 2);  // tb bits 9-10
+	String[1][0] |= COMPOSE_BITS(UintValue & 0x1f, 5, 5);  // tb bits 12-16
+	// NT (day number) should be in bits 17-31 of string 2 according to ICD
+	String[1][0] |= COMPOSE_BITS(Ephemeris->day >> 6, 0, 5);  // NT MSB bits 17-21
+	String[1][1] = COMPOSE_BITS(Ephemeris->day & 0x3f, 26, 6);  // NT bits 22-27
+	// NT bits 28-31 and other parameters need to continue here
 	UintValue = UnscaleUint(fabs(Ephemeris->vy) / 1000, -20); UintValue |= (Ephemeris->vy < 0) ? (1 << 23) : 0;
-	String[1][1] = COMPOSE_BITS(UintValue, 8, 24);
+	String[1][1] |= COMPOSE_BITS(UintValue >> 16, 0, 8);  // vy MSB
 	UintValue = UnscaleUint(fabs(Ephemeris->ay) / 1000, -30); UintValue |= (Ephemeris->ay < 0) ? (1 << 4) : 0;
 	String[1][1] |= COMPOSE_BITS(UintValue, 3, 5);
 	UintValue = UnscaleUint(fabs(Ephemeris->y) / 1000, -11); UintValue |= (Ephemeris->y < 0) ? (1 << 26) : 0;

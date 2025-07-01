@@ -149,7 +149,7 @@ UTC_TIME GlonassTimeToUtc(GLONASS_TIME GlonassTime)
 		time.Month = i;
 		time.Day = GlonassTime.Day - (DaysAcc[i-1] - 1);
 	}
-	time.Year = 1992 + GlonassTime.LeapYear;
+	time.Year = 1996 + GlonassTime.LeapYear;
 	Seconds = GlonassTime.MilliSeconds / 1000;
 	time.Hour = Seconds / 3600;
 	Seconds -= time.Hour * 3600;
@@ -168,12 +168,29 @@ GLONASS_TIME UtcToGlonassTime(UTC_TIME UtcTime)
 
 	time.MilliSeconds = (((UtcTime.Hour * 60) + UtcTime.Minute) * 60000 + (int)MilliSeconds) + 10800000;
 	time.SubMilliSeconds = MilliSeconds - (int)MilliSeconds;
-	Years = UtcTime.Year - 1992;
+	Years = UtcTime.Year - 1996;
 	Days = DaysAcc[UtcTime.Month - 1] + UtcTime.Day - 1;
-	if ((Years % 4) != 0 || Days >= 59)
-		Days ++;
-	Days += (Years % 4) * 365;
-	time.Day = Days + 1;
+	
+	// Handle leap year correctly
+	int YearsInCycle = Years % 4;
+	if (YearsInCycle == 0)
+	{
+		// First year of cycle is leap year
+		if (Days >= 59)
+			Days++;
+	}
+	else
+	{
+		// Not first year of cycle - add 1 for non-leap adjustment
+		Days++;
+		// Add days from previous years in cycle
+		if (YearsInCycle >= 1) Days += 366;  // First year was leap
+		if (YearsInCycle >= 2) Days += 365;  // Second year
+		if (YearsInCycle >= 3) Days += 365;  // Third year
+	}
+	
+	// Calculate total day number from epoch
+	time.Day = Days + 1 + (Years / 4) * 1461;
 	time.LeapYear = Years / 4;
 
 	return time;
