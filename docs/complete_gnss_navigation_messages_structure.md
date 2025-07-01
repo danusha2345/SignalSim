@@ -410,9 +410,9 @@ L1C consists of two components:
 | 5     | P           | Unreliability flag                  | -                  |
 | 6-7   | Reserved    | Reserved                            | -                  |
 | 8     | P1          | tb update flag                      | -                  |
-| 9-13  | tk(h+m)     | Current time hours+minutes          | hour, min          |
-| 14-19 | tk(m)       | Current time minutes                | min                |
-| 20    | tk(s*2)     | Current time seconds (double)       | 30 sec             |
+| 9-13  | tk (hours)  | Current time - hours (0-23)         | hour               |
+| 14-19 | tk (minutes)| Current time - minutes (0-59)       | min                |
+| 20    | tk (30s)    | Current time - 30 sec interval      | 0 or 1             |
 | 21-27 | xn(tb)      | X coordinate in PZ-90.11 (MSB)      | km (LSB=2^-11)     |
 | 28-48 | xn(tb)      | X coordinate in PZ-90.11 (LSB)      | km (LSB=2^-11)     |
 | 49-53 | ẋn(tb)      | X velocity (MSB)                    | km/s (LSB=2^-20)   |
