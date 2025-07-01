@@ -53,10 +53,9 @@ int GNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 	Stream[0] = (data[0] & 0xfffff);
 	Stream[1] = data[1];
 	Stream[2] = data[2] & 0xffffff00;
-	if (string == 0)	// first string, place tk here
+	if (string == 0)	// first string, tk already in data[0]
 	{
-		Stream[0] |= ((frame / 120) << 7);	// hours
-		Stream[0] |= (frame % 120);	// 30 seconds
+		// tk is already composed in ComposeStringEph, no need to overwrite
 	}
 	else if (string >= 4)
 		Stream[0] |= (string + 1) << 16;
@@ -128,7 +127,7 @@ int GNavBit::ComposeStringEph(PGLONASS_EPHEMERIS Ephemeris, unsigned int String[
 
 	// string 1
 	String[0][0] = (1 << 16) | COMPOSE_BITS(Ephemeris->P, 12, 2);
-//	String[0][0] |= COMPOSE_BITS(Ephemeris->tk, 0, 12);
+	String[0][0] |= COMPOSE_BITS(Ephemeris->tk, 0, 12);
 	UintValue = UnscaleUint(fabs(Ephemeris->vx) / 1000, -20); UintValue |= (Ephemeris->vx < 0) ? (1 << 23) : 0;
 	String[0][1] = COMPOSE_BITS(UintValue, 8, 24);
 	UintValue = UnscaleUint(fabs(Ephemeris->ax) / 1000, -30); UintValue |= (Ephemeris->ax < 0) ? (1 << 4) : 0;
@@ -225,7 +224,7 @@ unsigned int GNavBit::CheckSum(unsigned int Data[3])
 	unsigned int xor_value;
 	int i;
 
-	Data[2] &= ~0xf;	// clear checksum bits
+	Data[2] &= ~0xff;	// clear checksum bits (8 bits for GLONASS)
 	// calculate parity value
 	for (i = 0; i < 8; i ++)
 	{
