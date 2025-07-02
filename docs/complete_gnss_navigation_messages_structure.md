@@ -954,8 +954,9 @@ E1-C is used for:
 |----------|-----------------|-------------------|-----------------|-------------------|------------------------|
 | B1I      | 1561.098        | Open              | BPSK(2)         | 50                | Fully operational      |
 | B1C      | 1575.42         | Open              | BOC(1,1)+QMBOC  | 100               | Fully operational      |
+| B2I      | 1207.14         | Open              | BPSK(2)         | 50                | Fully operational      |
 | B2a      | 1176.45         | Open              | QPSK(10)        | 200               | Fully operational      |
-| B2b      | 1207.14         | Open/PPP          | QPSK(10)        | 200               | Fully operational      |
+| B2b      | 1207.14         | Open/PPP          | BPSK(1)         | 1000              | Fully operational      |
 | B2(B2a+b)| 1191.795        | Open              | AltBOC(15,10)   | 200               | Fully operational      |
 | B3I      | 1268.52         | Authorized        | BPSK(10)        | 50                | Fully operational      |
 | B1A      | 1575.42         | Authorized        | BOC(14,2)       | 200               | Limited access         |
@@ -1149,11 +1150,11 @@ E1-C is used for:
 | 2 | 6-10 | IODC | Issue of Data Clock | - |
 | 2 | 11-14 | URAI | User Range Accuracy Index | - |
 | 2 | 15-22 | Reserved | - | - |
-| 3 | 1-4 | URAI (продолжение) | User Range Accuracy Index | - |
+| 3 | 1-4 | URAI (continued) | User Range Accuracy Index | - |
 | 3 | 5-17 | WN | Week Number BDT | 1 |
 | 3 | 18-22 | t_oc[16:12] | Clock reference time MSB | 2^3 |
 | 4 | 1-12 | t_oc[11:0] | Clock reference time LSB | 2^3 |
-| 4 | 13-22 | TGD1 | Group Delay B1I | 0.1 нс |
+| 4 | 13-22 | TGD1 | Group Delay B1I | 0.1 ns |
 
 ### Page 2 - Ionospheric Parameters
 
@@ -1163,7 +1164,7 @@ E1-C is used for:
 | 1 | 12-14 | FraID | ID subframe (001) | - |
 | 1 | 15-22 | SOW[19:12] | Seconds of Week MSB | 1 |
 | 2 | 1-4 | Pnum | Page number (0010) | - |
-| 2 | 5-10 | TGD2 | Group Delay B2I | 0.1 нс |
+| 2 | 5-10 | TGD2 | Group Delay B2I | 0.1 ns |
 | 2 | 11-22 | Reserved | - | - |
 | 3 | 1-2 | Reserved | - | - |
 | 3 | 3-10 | α_0 | Ionospheric parameter | 2^-30 |
@@ -1174,7 +1175,7 @@ E1-C is used for:
 | 4 | 13-20 | β_0 | Ionospheric parameter | 2^11 |
 | 4 | 21-22 | β_1[7:6] | Ionospheric parameter MSB | 2^14 |
 
-### Page 3 - Parameterы коррекции часов (part 1)
+### Page 3 - Clock Correction Parameters (part 1)
 
 | Word | Bits | Parameter | Description | Scale Factor |
 |-------|------|----------|----------|---------|
@@ -1185,7 +1186,7 @@ E1-C is used for:
 | 2-3 | - | Reserved | - | - |
 | 4 | 1-12 | a_0[23:12] | Clock bias MSB | 2^-33 |
 
-### Page 4 - Parameterы коррекции часов (part 2) и ephemeris (part 1)
+### Page 4 - Clock Correction Parameters (part 2) and Ephemeris (part 1)
 
 | Word | Bits | Parameter | Description | Scale Factor |
 |-------|------|----------|----------|---------|
@@ -1196,8 +1197,8 @@ E1-C is used for:
 | 2 | 5-10 | a_0[11:6] | Clock bias | 2^-33 |
 | 2 | 11-22 | a_1[21:10] | Clock drift MSB | 2^-50 |
 | 3 | 1-10 | a_1[9:0] | Clock drift LSB | 2^-50 |
-| 3 | 11-22 | a_2 | Speed дрейфа часов | 2^-66 |
-| 4 | 1 | a_2 (продолжение) | Speed дрейфа часов | 2^-66 |
+| 3 | 11-22 | a_2 | Clock drift rate | 2^-66 |
+| 4 | 1 | a_2 (continued) | Clock drift rate | 2^-66 |
 | 4 | 2-6 | IODE | Issue of Data Ephemeris | - |
 | 4 | 7-22 | Δn | Mean motion correction | π × 2^-43 |
 
@@ -1262,7 +1263,7 @@ E1-C is used for:
 | 3 | 2-18 | C_rc[16:0] | Cosine harmonic correction radius | 2^-6 |
 | 3 | 19-22 | C_rs[17:14] | Sine harmonic correction radius MSB | 2^-6 |
 | 4 | 1-3 | C_rs[13:11] | Sine harmonic correction radius | 2^-6 |
-| 4 | 4-22 | Ω_dot[23:5] | Speed прямого восхождения MSB | π × 2^-43 |
+| 4 | 4-22 | Ω_dot[23:5] | Right ascension rate MSB | π × 2^-43 |
 
 ### Page 9 - Ephemeris (part 6)
 
@@ -1272,7 +1273,7 @@ E1-C is used for:
 | 1 | 12-14 | FraID | ID subframe (001) | - |
 | 1 | 15-22 | SOW[19:12] | Seconds of Week MSB | 1 |
 | 2 | 1-4 | Pnum | Page number (1001) | - |
-| 2 | 5-9 | Ω_dot[4:0] | Speed прямого восхождения LSB | π × 2^-43 |
+| 2 | 5-9 | Ω_dot[4:0] | Right ascension rate LSB | π × 2^-43 |
 | 2 | 10 | Ω_0[31] | Right ascension MSB | π × 2^-31 |
 | 2 | 11-22 | C_rs[10:0] | Sine harmonic correction radius LSB | 2^-6 |
 | 3 | 1-22 | Ω_0[30:9] | Right ascension | π × 2^-31 |
