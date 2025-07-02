@@ -627,9 +627,10 @@ BOOL DecodeEphOrbit(NavDataType DataType, char *str, FILE *fp_nav, PGLONASS_EPHE
 	DataType = NavDataGlonassFdma;
 	Eph->n = svid;
 	Eph->freq = (signed char)data[10];
-	// data[2] contains tk - time of frame beginning in seconds from start of day (Moscow time)
-	// Convert to GLONASS tk format: hour(5 bits):minute(6 bits):second/30(1 bit)
+	// data[2] contains message frame time tk in seconds of day
 	int tk_seconds = (int)data[2];
+	
+	// Convert to GLONASS tk format: hour(5 bits):minute(6 bits):second/30(1 bit)
 	int hours = tk_seconds / 3600;
 	int minutes = (tk_seconds % 3600) / 60;
 	int half_minutes = (tk_seconds % 60) / 30;

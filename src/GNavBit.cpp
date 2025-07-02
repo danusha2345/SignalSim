@@ -83,9 +83,10 @@ int GNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 
 int GNavBit::SetEphemeris(int svid, PGPS_EPHEMERIS Eph)
 {
-	if (svid < 1 || svid > 24 || !Eph || !Eph->flag)
+	PGLONASS_EPHEMERIS GloEph = (PGLONASS_EPHEMERIS)Eph;
+	if (svid < 1 || svid > 24 || !GloEph || !GloEph->flag)
 		return 0;
-	ComposeStringEph((PGLONASS_EPHEMERIS)Eph, StringEph[svid-1]);
+	ComposeStringEph(GloEph, StringEph[svid-1]);
 	return svid;
 }
 
@@ -127,67 +128,140 @@ int GNavBit::ComposeStringEph(PGLONASS_EPHEMERIS Ephemeris, unsigned int String[
 
 	// string 1
 	String[0][0] = (1 << 16);  // m = 1 (string number)
-	String[0][0] |= COMPOSE_BITS(Ephemeris->P >> 1, 12, 1);  // P1 bit (bit 8)
-	// tk in bits 9-20 according to GLONASS ICD
-	// tk format in Ephemeris->tk: hour(5 bits in 11:7):minute(6 bits in 6:1):second/30(1 bit in 0)
-	// String[0][0] bits mapping: bits 31:20 = string number, bits 19:0 = nav message bits 1-20
-	// tk should be in nav message bits 9-20, which maps to word bits 11:0
-	String[0][0] |= COMPOSE_BITS(Ephemeris->tk, 0, 12);  // tk in bits 9-20 (word bits 11:0)
-	UintValue = UnscaleUint(fabs(Ephemeris->vx) / 1000, -20); UintValue |= (Ephemeris->vx < 0) ? (1 << 23) : 0;
-	String[0][1] = COMPOSE_BITS(UintValue, 8, 24);
-	UintValue = UnscaleUint(fabs(Ephemeris->ax) / 1000, -30); UintValue |= (Ephemeris->ax < 0) ? (1 << 4) : 0;
-	String[0][1] |= COMPOSE_BITS(UintValue, 3, 5);
-	UintValue = UnscaleUint(fabs(Ephemeris->x) / 1000, -11); UintValue |= (Ephemeris->x < 0) ? (1 << 26) : 0;
-	String[0][1] |= COMPOSE_BITS(UintValue >> 24, 0, 3);
-	String[0][2] = COMPOSE_BITS(UintValue, 8, 24);
-	// Bn in bits 74-80 (7 bits) 
-	String[0][2] |= COMPOSE_BITS(Ephemeris->Bn & 0x7, 5, 3);  // Bn bits 74-76 (first 3 bits)
-	// Note: Bn continues in string 2
-	// P2 in bits 81-85 - depends on tb parity
-	unsigned int P2 = (Ephemeris->tb % 2) ? 0x15 : 0x0a;  // 10101 for odd, 01010 for even
-	String[0][2] |= COMPOSE_BITS(P2, 0, 5);  // P2 bits 81-85
+	// Bits 5-6: empty
+	String[0][0] |= COMPOSE_BITS(0, 14, 2);  // bits 5-6 empty
+	// P1 in bits 7-8 (P1 is in bits 0-1 of P field)
+	String[0][0] |= COMPOSE_BITS(Ephemeris->P & 0x3, 12, 2);  // P1 (bits 7-8)
+	// tk in bits 9-20 (12 bits: 5 hours, 6 minutes, 1 thirty-second interval)
+	String[0][0] |= COMPOSE_BITS(Ephemeris->tk, 0, 12);  // tk (bits 9-20)
+	// Coordinate X (bits 21-44, 24 bits total with sign)
+	UintValue = UnscaleUint(fabs(Ephemeris->x) / 1000, -11); 
+	UintValue |= (Ephemeris->x < 0) ? (1 << 23) : 0;  // sign bit for 24-bit value
+	// X entirely in word[1]: bits 21-44 map to positions 31-8 of word[1]
+	String[0][1] = COMPOSE_BITS(UintValue, 8, 24);  // bits 21-44 (all 24 bits)
+	
+	// Velocity X (bits 45-49, 5 bits with sign)
+	UintValue = UnscaleUint(fabs(Ephemeris->vx) / 1000, -20); 
+	UintValue |= (Ephemeris->vx < 0) ? (1 << 4) : 0;  // sign bit for 5-bit value
+	// vx: bits 45-49 map to positions 7-3 of word[1]
+	String[0][1] |= COMPOSE_BITS(UintValue, 3, 5);  // bits 45-49
+	
+	// Acceleration X (bits 50-76, 27 bits with sign)
+	UintValue = UnscaleUint(fabs(Ephemeris->ax) / 1000, -30); 
+	UintValue |= (Ephemeris->ax < 0) ? (1 << 26) : 0;  // sign bit for 27-bit value
+	// ax split: bits 50-52 in word[1] positions 2-0, bits 53-76 in word[2] positions 31-8
+	String[0][1] |= COMPOSE_BITS(UintValue >> 24, 0, 3);  // bits 50-52 (3 MSB)
+	String[0][2] = COMPOSE_BITS(UintValue, 8, 24);  // bits 53-76 (24 LSB)
+	
+	// Note: Bits 77-84 are for Hamming code (КХ) - handled by CheckSum function
+	// Bit 85 is time mark (МВ) - handled separately
 	// string 2
-	String[1][0] = (2 << 16) | COMPOSE_BITS(Ephemeris->Bn >> 3, 15, 3);  // Bn bits 5-7
-	String[1][0] |= COMPOSE_BITS(Ephemeris->P >> 2, 12, 1);  // P bit 8
-	UintValue = Ephemeris->tb / 900;
-	String[1][0] |= COMPOSE_BITS(UintValue >> 5, 10, 2);  // tb bits 9-10
-	String[1][0] |= COMPOSE_BITS(UintValue & 0x1f, 5, 5);  // tb bits 12-16
-	// NT (day number) should be in bits 17-31 of string 2 according to ICD
-	String[1][0] |= COMPOSE_BITS(Ephemeris->day >> 6, 0, 5);  // NT MSB bits 17-21
-	String[1][1] = COMPOSE_BITS(Ephemeris->day & 0x3f, 26, 6);  // NT bits 22-27
-	// NT bits 28-31 and other parameters need to continue here
-	UintValue = UnscaleUint(fabs(Ephemeris->vy) / 1000, -20); UintValue |= (Ephemeris->vy < 0) ? (1 << 23) : 0;
-	String[1][1] |= COMPOSE_BITS(UintValue >> 16, 0, 8);  // vy MSB
-	UintValue = UnscaleUint(fabs(Ephemeris->ay) / 1000, -30); UintValue |= (Ephemeris->ay < 0) ? (1 << 4) : 0;
-	String[1][1] |= COMPOSE_BITS(UintValue, 3, 5);
-	UintValue = UnscaleUint(fabs(Ephemeris->y) / 1000, -11); UintValue |= (Ephemeris->y < 0) ? (1 << 26) : 0;
-	String[1][1] |= COMPOSE_BITS(UintValue >> 24, 0, 3);
-	String[1][2] = COMPOSE_BITS(UintValue, 8, 24);
+	String[1][0] = (2 << 16);  // m = 2 (string number)
+	// Bn (bits 5-7, 3 bits) - unreliability flag
+	String[1][0] |= COMPOSE_BITS(Ephemeris->Bn, 13, 3);  // Bn (bits 5-7)
+	// P2 (bit 8) - satellite mode flag (P2 is in bit 2 of P field)
+	String[1][0] |= COMPOSE_BITS((Ephemeris->P >> 2) & 1, 12, 1);  // P2 (bit 8)
+	// tb (bits 9-15, 7 bits) - time index within day in 15-minute intervals
+	UintValue = Ephemeris->tb / 900;  // tb in 15-minute intervals
+	String[1][0] |= COMPOSE_BITS(UintValue, 5, 7);  // tb (bits 9-15)
+	// Bits 16-20: empty
+	String[1][0] |= COMPOSE_BITS(0, 0, 5);  // bits 16-20 empty
+	
+	// Coordinate Y (bits 21-44, 24 bits total with sign)
+	UintValue = UnscaleUint(fabs(Ephemeris->y) / 1000, -11); 
+	UintValue |= (Ephemeris->y < 0) ? (1 << 23) : 0;  // sign bit for 24-bit value
+	// Y entirely in word[1]: bits 21-44 map to positions 31-8 of word[1]
+	String[1][1] = COMPOSE_BITS(UintValue, 8, 24);  // bits 21-44 (all 24 bits)
+	
+	// Velocity Y (bits 45-49, 5 bits with sign)
+	UintValue = UnscaleUint(fabs(Ephemeris->vy) / 1000, -20); 
+	UintValue |= (Ephemeris->vy < 0) ? (1 << 4) : 0;  // sign bit for 5-bit value
+	// vy: bits 45-49 map to positions 7-3 of word[1]
+	String[1][1] |= COMPOSE_BITS(UintValue, 3, 5);  // bits 45-49
+	
+	// Acceleration Y (bits 50-76, 27 bits with sign)
+	UintValue = UnscaleUint(fabs(Ephemeris->ay) / 1000, -30); 
+	UintValue |= (Ephemeris->ay < 0) ? (1 << 26) : 0;  // sign bit for 27-bit value
+	// ay split: bits 50-52 in word[1] positions 2-0, bits 53-76 in word[2] positions 31-8
+	String[1][1] |= COMPOSE_BITS(UintValue >> 24, 0, 3);  // bits 50-52 (3 MSB)
+	String[1][2] = COMPOSE_BITS(UintValue, 8, 24);  // bits 53-76 (24 LSB)
 	// string 3
-	String[2][0] = (3 << 16) | COMPOSE_BITS(Ephemeris->P >> 3, 15, 1);
-	UintValue = UnscaleUint(fabs(Ephemeris->gamma), -40); UintValue |= (Ephemeris->gamma < 0) ? (1 << 10) : 0;
-	String[2][0] |= COMPOSE_BITS(UintValue, 4, 11);
-	String[2][0] |= COMPOSE_BITS(Ephemeris->P >> 5, 0, 3);
-	UintValue = UnscaleUint(fabs(Ephemeris->vz) / 1000, -20); UintValue |= (Ephemeris->vz < 0) ? (1 << 23) : 0;
-	String[2][1] = COMPOSE_BITS(UintValue, 8, 24);
-	UintValue = UnscaleUint(fabs(Ephemeris->az) / 1000, -30); UintValue |= (Ephemeris->az < 0) ? (1 << 4) : 0;
-	String[2][1] |= COMPOSE_BITS(UintValue, 3, 5);
-	UintValue = UnscaleUint(fabs(Ephemeris->z) / 1000, -11); UintValue |= (Ephemeris->z < 0) ? (1 << 26) : 0;
-	String[2][1] |= COMPOSE_BITS(UintValue >> 24, 0, 3);
-	String[2][2] = COMPOSE_BITS(UintValue, 8, 24);
+	String[2][0] = (3 << 16);  // m = 3 (string number)
+	// P3 (bit 5) - satellite time flag
+	String[2][0] |= COMPOSE_BITS((Ephemeris->P >> 3) & 1, 15, 1);  // P3 (bit 5)
+	// gamma (bits 6-16, 11 bits with sign) - relative frequency deviation
+	UintValue = UnscaleUint(fabs(Ephemeris->gamma), -40); 
+	UintValue |= (Ephemeris->gamma < 0) ? (1 << 10) : 0;  // sign bit for 11-bit value
+	String[2][0] |= COMPOSE_BITS(UintValue, 4, 11);  // gamma (bits 6-16)
+	// Reserved (bit 17)
+	String[2][0] |= COMPOSE_BITS(0, 3, 1);  // bit 17 reserved
+	// p (bits 18-19, 2 bits) - GLONASS-M flag
+	String[2][0] |= COMPOSE_BITS(Ephemeris->M & 0x3, 1, 2);  // p (bits 18-19)
+	// ln (bit 20) - health flag (extracted from bit 5 of P field)
+	String[2][0] |= COMPOSE_BITS((Ephemeris->P >> 5) & 1, 0, 1);  // ln (bit 20)
+	
+	// Coordinate Z (bits 21-44, 24 bits total with sign)
+	UintValue = UnscaleUint(fabs(Ephemeris->z) / 1000, -11); 
+	UintValue |= (Ephemeris->z < 0) ? (1 << 23) : 0;  // sign bit for 24-bit value
+	// Z entirely in word[1]: bits 21-44 map to positions 31-8 of word[1]
+	String[2][1] = COMPOSE_BITS(UintValue, 8, 24);  // bits 21-44 (all 24 bits)
+	
+	// Velocity Z (bits 45-49, 5 bits with sign)
+	UintValue = UnscaleUint(fabs(Ephemeris->vz) / 1000, -20); 
+	UintValue |= (Ephemeris->vz < 0) ? (1 << 4) : 0;  // sign bit for 5-bit value
+	// vz: bits 45-49 map to positions 7-3 of word[1]
+	String[2][1] |= COMPOSE_BITS(UintValue, 3, 5);  // bits 45-49
+	
+	// Acceleration Z (bits 50-76, 27 bits with sign)
+	UintValue = UnscaleUint(fabs(Ephemeris->az) / 1000, -30); 
+	UintValue |= (Ephemeris->az < 0) ? (1 << 26) : 0;  // sign bit for 27-bit value
+	// az split: bits 50-52 in word[1] positions 2-0, bits 53-76 in word[2] positions 31-8
+	String[2][1] |= COMPOSE_BITS(UintValue >> 24, 0, 3);  // bits 50-52 (3 MSB)
+	String[2][2] = COMPOSE_BITS(UintValue, 8, 24);  // bits 53-76 (24 LSB)
 	// string 4
-	UintValue = UnscaleUint(fabs(Ephemeris->tn), -30); UintValue |= (Ephemeris->tn < 0) ? (1 << 21) : 0;
-	String[3][0] = (4 << 16) | COMPOSE_BITS(UintValue >> 6, 0, 16);
-	String[3][1] = COMPOSE_BITS(UintValue, 26, 6);
-	UintValue = UnscaleUint(fabs(Ephemeris->dtn), -30); UintValue |= (Ephemeris->dtn < 0) ? (1 << 4) : 0;
-	String[3][1] |= COMPOSE_BITS(UintValue, 21, 5);
-	String[3][1] |= COMPOSE_BITS(Ephemeris->En, 16, 5);
-	String[3][1] |= COMPOSE_BITS(Ephemeris->P >> 4, 1, 1);
-	String[3][1] |= COMPOSE_BITS(Ephemeris->Ft >> 3, 0, 1);
-	String[3][2] = COMPOSE_BITS(Ephemeris->Ft, 29, 3);
-	String[3][2] |= COMPOSE_BITS(Ephemeris->day, 15, 11);
-	String[3][2] |= COMPOSE_BITS(Ephemeris->n, 10, 5);
-	String[3][2] |= COMPOSE_BITS(Ephemeris->M, 8, 2);
+	String[3][0] = (4 << 16);  // m = 4 (string number)
+	// tau_n (bits 5-26, 22 bits with sign) - satellite time scale correction
+	UintValue = UnscaleUint(fabs(Ephemeris->tn), -30); 
+	UintValue |= (Ephemeris->tn < 0) ? (1 << 21) : 0;  // sign bit for 22-bit value
+	// tau_n split: 16 bits in word[0], 6 bits in word[1]
+	String[3][0] |= COMPOSE_BITS(UintValue >> 6, 0, 16);  // bits 5-20 (16 MSB)
+	String[3][1] = COMPOSE_BITS(UintValue, 26, 6);  // bits 21-26 (6 LSB)
+	
+	// delta_tau_n (bits 27-31, 5 bits with sign) - tn and tc scale difference
+	UintValue = UnscaleUint(fabs(Ephemeris->dtn), -30); 
+	UintValue |= (Ephemeris->dtn < 0) ? (1 << 4) : 0;  // sign bit for 5-bit value
+	String[3][1] |= COMPOSE_BITS(UintValue, 21, 5);  // bits 27-31
+	
+	// En (bits 32-36, 5 bits) - age of operational information
+	String[3][1] |= COMPOSE_BITS(Ephemeris->En, 16, 5);  // bits 32-36
+	
+	// Reserved (bits 37-50, 14 bits)
+	String[3][1] |= COMPOSE_BITS(0, 2, 14);  // bits 37-50 reserved
+	
+	// P4 (bit 51) - ephemeris update flag
+	String[3][1] |= COMPOSE_BITS((Ephemeris->P >> 4) & 1, 1, 1);  // P4 (bit 51)
+	
+	// FT (bits 52-55, 4 bits) - predicted frequency correction
+	String[3][1] |= COMPOSE_BITS(Ephemeris->Ft & 0xF, 0, 4);  // bits 52-55 (positions 3-0)
+	String[3][2] = 0;  // Start with clean word[2]
+	
+	// Bits 56-58: empty (bits 56-58 map to word[2] positions 28-26)
+	String[3][2] |= COMPOSE_BITS(0, 26, 3);  // bits 56-58 empty
+	
+	// NT (bits 59-69, 11 bits) - day number within four-year period
+	// bits 59-69 map to word[2] positions 25-15
+	String[3][2] |= COMPOSE_BITS(Ephemeris->day, 15, 11);  // bits 59-69
+	
+	// n (bits 70-74, 5 bits) - satellite number in system  
+	// bits 70-74 map to word[2] positions 14-10
+	String[3][2] |= COMPOSE_BITS(Ephemeris->n, 10, 5);  // bits 70-74
+	
+	// M (bits 75-76, 2 bits) - satellite type (01-M, 10-K1, 11-K2)
+	// bits 75-76 map to word[2] positions 9-8
+	String[3][2] |= COMPOSE_BITS(Ephemeris->M, 8, 2);  // bits 75-76
+	
+	// Note: Bits 77-84 are for Hamming code (КХ) - handled by CheckSum function
+	// Bit 85 is time mark (МВ) - handled separately
 
 	return 0;
 }
