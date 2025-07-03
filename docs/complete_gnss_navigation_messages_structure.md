@@ -471,32 +471,32 @@ L1C consists of two components:
 
 Strings 6, 8, 10, 12, 14 (odd almanac satellites):
 
-| Bits  | Parameter   | Description                         |
-|-------|-------------|-------------------------------------|
-| 1-4   | m           | String number                       |
-| 5     | Cn          | Generalized nA satellite flag       |
-| 6-7   | Mn          |                                     |
-| 8-12  | nA          | Almanac satellite frequency literal |
-| 13-22 | τAn         |                                     |
-| 23-43 | λnA         |                                     |
-| 44-61 | ΔinA        | Inclination correction (+0.067π rad)|
-| 62-76 | ΔT'nA       | Rate of change of period            |
-| 77-84 | HC          | Hamming code                        |
-|    85 | TM          | Time mark                           |
+| Bits  | Parameter   | Description                                            | Units              |
+|-------|-------------|--------------------------------------------------------|--------------------|
+| 1-4   | m           | String number                                          | -                  |
+| 5     | Cn          | Almanac satellite health flag (0=healthy, 1=unhealthy) | -                  |
+| 6-7   | Mn          | Satellite type (01=GLONASS-M)                          | -                  |
+| 8-12  | nA          | Almanac satellite frequency channel number (-7 to +6)   | -                  |
+| 13-22 | τnA         | Coarse time correction to nA satellite time scale      | sec (LSB=2^-18)    |
+| 23-43 | λnA         | Longitude of ascending node at instant tλnA            | semicircles (LSB=2^-20) |
+| 44-61 | ΔinA        | Inclination correction to nominal value (+0.3 rad)     | semicircles (LSB=2^-20) |
+| 62-76 | εnA         | Eccentricity                                           | dimensionless (LSB=2^-20) |
+| 77-84 | HC          | Hamming code                                           | -                  |
+|    85 | TM          | Time mark                                              | -                  |
 
 Strings 7, 9, 11, 13, 15 (even almanac satellites):
 
-| Bits  | Parameter   | Description                         |
-|-------|-------------|-------------------------------------|
-| 1-4   | m           | String number                       |
-| 5-20  | ωА          |                                     |
-| 21-41 | tA  λn      | Generalized nA satellite flag       |
-| 42-63 | τnA         | Coarse time correction value        |
-| 64-70 | ΔT′A        |                                     |
-| 71-75 | НA          |                                     |
-|    76 |             |                                     |
-| 77-84 | HC          | Hamming code                        |
-|    85 | TM          | Time mark                           |
+| Bits  | Parameter   | Description                                            | Units              |
+|-------|-------------|--------------------------------------------------------|--------------------|
+| 1-4   | m           | String number                                          | -                  |
+| 5-20  | ωnA         | Argument of perigee                                    | semicircles (LSB=2^-15) |
+| 21-41 | tλnA        | Time of first ascending node passage within nA day    | sec (LSB=2^-5)     |
+| 42-63 | ΔTnA        | Correction to mean value of Draconian period          | sec/orbit (LSB=2^-9) |
+| 64-70 | ΔṪnA        | Rate of change of Draconian period                    | sec/orbit² (LSB=2^-14) |
+| 71-75 | НnA         | Carrier frequency number (-7 to +24)                  | -                  |
+| 76    | ln          | Almanac health flag for nA (0=healthy, 1=unhealthy)   | -                  |
+| 77-84 | HC          | Hamming code                                           | -                  |
+|    85 | TM          | Time mark                                              | -                  |
 
 **STRING 5 - System Status**
 
