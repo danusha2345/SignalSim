@@ -33,7 +33,7 @@
 	},
 	"ephemeris": {
 		"type": "RINEX",
-		"name": "../EphData/rinex_v3_20251560000.rnx"
+		"name": "EphData/rinex_v3_20251560000.rnx"
 	},
 	"output": {
 		"type": "IFdata",
