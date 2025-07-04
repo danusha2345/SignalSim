@@ -209,37 +209,6 @@ Similar almanac page structure for satellites 1-24.
 | 36   | GGTO                    | GPS-GNSS Time Offset             | Low        |
 | 37   | Constellation status    | Health of all satellites         | Medium     |
 
-#### Detailed Structure of Message Type 10 (Ephemeris-1):
-
-| Bits  | Parameter   | Description                          | Units                  |
-|-------|-------------|--------------------------------------|------------------------|
-| 1-8   | Preamble    | 10001011                             | -                      |
-| 9-14  | PRN         | Satellite number                     | -                      |
-| 15-20 | Message type| 10                                   | -                      |
-| 21-37 | TOW         | Time of week                         | sec (LSB=6)            |
-| 38    | Alert       | Alert flag                           | -                      |
-| 39-48 | WN          | Truncated week number (mod 1024)     | weeks                  |
-| 49-59 | toc         | Clock reference time                 | sec (LSB=300)          |
-| 60-64 | URA_NED0    | Accuracy index                       | -                      |
-| 65-72 | URA_NED1    | ED accuracy index                    | -                      |
-| 73-80 | URA_NED2    | ED accuracy index                    | -                      |
-| 81-90 | toe         | Ephemeris reference time             | sec (LSB=300)          |
-| 91-114| A           | Semi-major axis difference from nominal | m (LSB=2^-9)        |
-|115-131| Adot        | Rate of change of A                  | m/s (LSB=2^-21)        |
-|132-148| Δn0         | Mean motion difference               | semicircles/s (LSB=2^-44)|
-|149-165| Δndot       | Rate of change of Δn                 | semicircles/s² (LSB=2^-57)|
-|166-198| M0          | Mean anomaly                         | semicircles (LSB=2^-32) |
-|199-231| e           | Eccentricity                         | dimensionless (LSB=2^-34)|
-|232-264| ω           | Argument of perigee                  | semicircles (LSB=2^-32) |
-
-#### Detailed Structure of Message Type 11 (Ephemeris-2):
-
-| Bits  | Parameter   | Description                          | Units                |
-|-------|-------------|--------------------------------------|----------------------|
-| 1-20  | Header      | Preamble, PRN, type                  | -                    |
-| 21-37 | TOW         | Time of week                         | sec (LSB=6)          |
-| 38    | Alert       | Alert flag                           | -                    |
-| 39-72 | Ω0          | Longitude of ascending node          | semicircles (LSB=2^-32)|
 | 73-106| i0          | Inclination                          | semicircles (LSB=2^-32)|
 |107-124| Δi0-dot     | Rate of change of inclination        | semicircles/s (LSB=2^-44)|
 |125-158| Ω-dot       | Rate of right ascension              | semicircles/s (LSB=2^-44)|
@@ -288,32 +257,48 @@ L1C consists of two components:
 - **L1C-D (Data)**: navigation data transmission (25% power)
 - **L1C-P (Pilot)**: pilot channel without data (75% power)
 
-#### CNAV-2 Message Structure:
-- **Frame**: 1800 symbols (18 seconds)
-- **Subframe 1**: 9 symbols - TOW counter
-- **Subframe 2**: 600 symbols - encoded data
-- **Subframe 3**: 274 symbols - FEC symbols
+#### CNAV-2 Frame Structure:
+- **Total frame length**: 1800 bits/symbols (18 seconds at 100 symbols/sec)
+- **Subframe 1**: 52 bits
+  - 9 bits TOI (Time of Interval)
+  - 43 bits BCH(51,8) encoding
+- **Subframe 2**: 1200 symbols (after LDPC encoding)
+  - 600 bits of raw data (576 bits ephemeris & clock + 24 bits CRC)
+  - LDPC encoding with rate 1/2
+  - Ephemeris data transmitted in EVERY frame
+- **Subframe 3**: 548 symbols (after LDPC encoding)
+  - 274 bits of raw data (250 bits variable data + 24 bits CRC)
+  - LDPC encoding with rate 1/2
+  - Contains pages with different data types
 
-**L1C CNAV-2 Message Types:**
+**IMPORTANT DIFFERENCE between CNAV-2 and CNAV (L2C/L5):**
+In CNAV-2, ephemeris are NOT transmitted as separate message types 10 and 11. Instead, complete ephemeris and clock data are transmitted in subframe 2 of EVERY frame, allowing faster navigation data acquisition.
 
-| Type | Name                        | Content                    | Period   |
-|------|---------------------------- |----------------------------|----------|
-| 10   | Ephemeris-1                 | Orbital parameters part 1  | 18 sec   |
-| 11   | Ephemeris-2                 | Orbital parameters part 2  | 18 sec   |
-| 12   | Reduced almanac             | Constellation almanac      | 18 sec   |
-| 13   | Clock corrections           | Clock and group delay data | 18 sec   |
-| 14   | Reduced ephemeris           | Short-term orbital data    | 18 sec   |
-| 15   | Text                        | Free text                  | 18 sec   |
-| 30   | ISM-I                       | Integrity Support Message  | 18 sec   |
-| 31   | ISM-A                       | ISM for almanac            | 18 sec   |
-| 32   | EOP                         | Earth orientation parameters| 18 sec   |
-| 33   | UTC                         | UTC time parameters        | 18 sec   |
-| 34   | Differential corrections    | Regional enhancements      | 18 sec   |
-| 35   | GGTO                        | GPS-GNSS Time Offset       | 18 sec   |
-| 36   | Constellation data          | Status of all satellites   | 18 sec   |
-| 37   | System time                 | Time synchronization       | 18 sec   |
+#### Subframe 2 Content (Ephemeris and Clock):
+Subframe 2 contains all necessary orbit and clock parameters:
+- Time parameters: WN (week), toe, toc
+- Orbit parameters: M0, e, sqrt(A), Ω0, i0, ω
+- Rate of change: Ω̇, i̇, Δn
+- Harmonic corrections: Cis, Cic, Crs, Crc, Cus, Cuc
+- Clock parameters: af0, af1, af2
+- Group delays: TGD, ISC
+- Accuracy and health parameters: URA, health
 
-#### Detailed Structure of Message Type 10 (Ephemeris-1) CNAV-2:
+#### Subframe 3 Page Types:
+Subframe 3 contains variable data organized in pages:
+
+| Page    | Data Type                 | Content                                 |
+|---------|---------------------------|-----------------------------------------|
+| 0       | Ionosphere/UTC            | Ionospheric parameters & UTC corrections|
+| 1-6     | MIDI Almanac              | Reduced almanac (6 satellites)          |
+| 7       | Reduced Almanac           | Full constellation almanac              |
+| 8       | Clock Parameters          | Additional clock corrections            |
+| 9       | GGTO                      | GPS-GNSS Time Offset                    |
+| 10      | EOP                       | Earth orientation parameters            |
+| 11      | Diff. Corrections         | Regional corrections                    |
+| 12      | Text                      | Text messages                           |
+| 13      | ISM                       | Integrity Support Message               |
+| 14-63   | Reserved                  | Reserved for future use                 |
 
 | Bits  | Parameter      | Description                       | Units                  |
 |-------|----------------|-----------------------------------|------------------------|

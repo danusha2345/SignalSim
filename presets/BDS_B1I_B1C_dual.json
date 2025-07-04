@@ -40,7 +40,7 @@
 		"format": "IQ8",
 		"sampleFreq": 20.0,
 		"centerFreq": 1568.259,
-		"name": "generated_files/BDS_B1I_B1C_dual_30s.C8",
+		"name": "generated_files/BDS_B1I_B1C_dual.C8",
 		"config": {
 			"elevationMask": 5
 		},

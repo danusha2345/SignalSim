@@ -206,7 +206,7 @@ BOOL CSatelliteSignal::GetSatelliteSignal(GNSS_TIME TransmitTime, complex_number
 			break;
 		case SIGNAL_INDEX_L1C:
 			DataSignal = complex_number(DataBit * AMPLITUDE_1_4, 0);
-			PilotSignal = complex_number(PilotBit * AMPLITUDE_29_44, 0);
+			PilotSignal = complex_number(PilotBit * AMPLITUDE_3_4, 0);
 			break;
 		case SIGNAL_INDEX_L2C:
 			DataSignal = complex_number(DataBit * AMPLITUDE_1_2, 0);

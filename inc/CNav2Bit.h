@@ -28,6 +28,7 @@ public:
 private:
 	unsigned int Subframe2[32][18];	// 32 SVs, 576bits in subframe 2, 32bits in each DWORD MSB first, lowest address first
 	unsigned int Subframe3[50][9];	// reserve 50 subframe3 contents, 32bits in each DWORD MSB first, lowest address first
+	int currentPage;                // Current page number for rotation
 
 	static const unsigned long long BCH_toi_table[256];	// BCH encode table for TOI
 	static const unsigned int L1CMatrixGen2[L1C_SUBFRAME2_SYMBOL_LENGTH*19];

@@ -25,7 +25,7 @@
         },
         "trajectoryList": [{
             "type": "Const",
-            "time": 30.0
+            "time": 90.0
         }]
     },
     "ephemeris": {
@@ -39,7 +39,7 @@
         "centerFreq": 1575.42,
         "name": "GPS_L1C_test.C8",
         "config": {
-            "elevationMask": 10
+            "elevationMask": 4
         }
     },
     "systemSelect": [
