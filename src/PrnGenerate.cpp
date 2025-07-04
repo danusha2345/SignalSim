@@ -360,6 +360,7 @@ int *PrnGenerate::GetL1CWeil(int InsertIndex, int PhaseDiff)
 	LegendreSequence(LegendreCode, 10223);
 	for (i = 0; i < 10230; i ++)
 	{
+		if (Index1 >= 10223) Index1 -= 10223;
 		if (Index2 >= 10223) Index2 -= 10223;
 		if (i >= InsertIndex - 1 && i < InsertIndex + 6)
 			PrnSequence[i] = InsertSequence[i - InsertIndex + 1];
