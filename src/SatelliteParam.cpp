@@ -24,7 +24,7 @@ int GetVisibleSatellite(KINEMATIC_INFO Position, GNSS_TIME time, OUTPUT_PARAM Ou
 
 	for (i = 0; i < Number; i ++)
 	{
-		if (Eph[i] == NULL || Eph[i]->valid != 1 || Eph[i]->health != 0)
+		if (Eph[i] == NULL || (Eph[i]->valid & 1) == 0 || Eph[i]->health != 0)
 			continue;
 		if (system == GpsSystem)
 		{
