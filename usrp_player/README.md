@@ -2,6 +2,100 @@
 
 Высокопроизводительный плеер для передачи больших файлов с IQ-данными через USRP устройства.
 
+## Требования
+
+### Системные требования
+- **ОС**: Linux (Ubuntu 20.04+, Debian 10+), Windows 10/11, macOS
+- **Процессор**: x86_64, рекомендуется 4+ ядер для высоких скоростей
+- **Память**: минимум 4 GB RAM, рекомендуется 8+ GB
+- **Диск**: SSD рекомендуется для файлов >1 GB
+
+### Программные зависимости
+
+#### 1. UHD (USRP Hardware Driver) 4.8.0.0
+```bash
+# Ubuntu/Debian
+sudo add-apt-repository ppa:ettusresearch/uhd
+sudo apt update
+sudo apt install libuhd-dev uhd-host
+
+# Или сборка из исходников для версии 4.8.0.0
+git clone https://github.com/EttusResearch/uhd.git
+cd uhd
+git checkout v4.8.0.0
+cd host
+mkdir build && cd build
+cmake -DCMAKE_INSTALL_PREFIX=/usr/local ..
+make -j4
+sudo make install
+sudo ldconfig
+```
+
+#### 2. Boost библиотеки
+```bash
+# Ubuntu/Debian
+sudo apt install libboost-all-dev
+
+# Минимально необходимые компоненты:
+# - boost-program-options
+# - boost-thread
+# - boost-system
+```
+
+#### 3. Компилятор C++
+```bash
+# GCC 7+ или Clang 6+
+sudo apt install build-essential cmake
+```
+
+#### 4. Драйверы USB (для B-серии)
+```bash
+# Установка правил udev
+cd /usr/local/lib/uhd/utils
+sudo cp uhd-usrp.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+### Настройка после установки
+
+#### 1. Загрузка образов FPGA
+```bash
+# Загрузить образы для всех устройств
+sudo uhd_images_downloader
+
+# Проверка версии UHD
+uhd_config_info --version
+```
+
+#### 2. Проверка устройства
+```bash
+# Найти подключенные USRP
+uhd_find_devices
+
+# Проверить информацию об устройстве
+uhd_usrp_probe
+```
+
+#### 3. Настройка сети для X310/N-серии
+```bash
+# Установить MTU 9000 для 10 GigE
+sudo ip link set dev eth0 mtu 9000
+
+# Настроить IP в той же подсети
+sudo ip addr add 192.168.10.1/24 dev eth0
+```
+
+#### 4. Оптимизация производительности (Linux)
+```bash
+# Увеличить размер буферов
+sudo sysctl -w net.core.rmem_max=50000000
+sudo sysctl -w net.core.wmem_max=50000000
+
+# Отключить CPU throttling
+sudo cpupower frequency-set -g performance
+```
+
 ## Возможности
 
 - Поддержка формата SC8 (8-bit signed complex)
@@ -158,3 +252,43 @@ SC8 (signed complex 8-bit) - формат представления IQ данн
 1. **B200/B210**: Максимальная скорость ~61.44 Msps через USB 3.0
 2. **X310**: Поддерживает до 200 Msps через 10 GigE
 3. **Температура**: При длительной передаче на максимальной мощности возможен перегрев
+
+## Решение типичных проблем
+
+### Ошибка "No devices found"
+```bash
+# Проверить подключение
+lsusb | grep -i ettus  # для USB устройств
+ip addr show           # для сетевых устройств
+
+# Перезагрузить драйверы
+sudo rmmod usb_uhd
+sudo modprobe usb_uhd
+```
+
+### Ошибка "Failed to load FPGA image"
+```bash
+# Переустановить образы
+sudo uhd_images_downloader -t b2xx  # для B200/B210
+sudo uhd_images_downloader -t x3xx  # для X310
+```
+
+### Постоянные underrun
+1. Проверьте загрузку CPU: `htop`
+2. Проверьте скорость USB: `lsusb -t`
+3. Для сети проверьте потери пакетов: `ping -c 1000 192.168.10.2`
+
+### Компиляция на Windows (MSYS2)
+```bash
+# Установить зависимости
+pacman -S mingw-w64-x86_64-uhd mingw-w64-x86_64-boost mingw-w64-x86_64-cmake
+
+# Компиляция
+mkdir build && cd build
+cmake -G "MinGW Makefiles" ..
+mingw32-make
+```
+
+## Лицензия
+
+Код распространяется под лицензией проекта SignalSim.
