@@ -8,8 +8,12 @@
 
 #include <memory.h>
 #include <cmath>
+#include <cstdio>
 #include "ConstVal.h"
 #include "CNav2Bit.h"
+
+// GPS nominal semi-major axis
+#define GPS_A_REF 26559710.0  // meters
 
 // table for BCH(51,8) encode
 const unsigned long long CNav2Bit::BCH_toi_table[256] = {
@@ -933,6 +937,9 @@ CNav2Bit::CNav2Bit()
 	memset(Subframe2, 0, sizeof(Subframe2));
 	memset(Subframe3, 0, sizeof(Subframe3));
 	
+	// Initialize page rotation
+	currentPage = 0;
+	
 	// Initialize Subframe3 page 0 with minimal valid data
 	// Page 0 is clock/iono page - critical for receivers
 	// Set message type ID = 30 (clock/iono) in bits 0-5
@@ -1020,9 +1027,12 @@ int CNav2Bit::SetIonoUtc(PIONO_PARAM IonoParam, PUTC_PARAM UtcParam)
 		page0[5] |= (UtcParam->TLSF & 0xFF) << 18;
 	}
 	
-	// Calculate and append CRC-24Q
-	unsigned int crc = Crc24qEncode(page0, 274);
-	page0[8] |= (crc << 8);
+	// Calculate and append CRC-24Q for 250 bits of data
+	// Subframe 3 contains 250 data bits + 24 CRC bits = 274 total bits
+	unsigned int crc = Crc24qEncode(page0, 250);
+	// CRC starts at bit 250, which is bit 26 of page0[7]
+	page0[7] |= (crc >> 18) & 0x3F;  // 6 bits in page0[7]
+	page0[8] = (crc << 14);           // remaining 18 bits in page0[8]
 	
 	return 1;
 }
@@ -1040,22 +1050,45 @@ int CNav2Bit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBit
 	page = StartTime.MilliSeconds / 18000;		// frames from week epoch
 	itow = page / 400;
 	toi = page % 400;
-	// assume subframe 3 broadcast first page
-	page = 0;
+	
+#ifdef DEBUG_L1C
+	printf("\n=== L1C GetFrameData Debug ===\n");
+	printf("PRN: %d, Week: %d, MS: %d\n", svid, StartTime.Week, StartTime.MilliSeconds);
+	printf("Page: %d, ITOW: %d, TOI: %d (0x%03X)\n", page, itow, toi, toi);
+#endif
+	// In CNAV-2, ephemeris are in subframe 2 of every frame
+	// Subframe 3 pages contain variable data (almanac, iono, etc.)
+	// For now, always use page 0 which contains ionosphere/clock data
+	int subframe3_page = 0;  // Use page 0 for subframe 3
 
 	data = Subframe2[svid-1];
 	for (i = 0; i < 18; i ++)
 		Stream[i] = data[i];
-	// insert WN and ITOW for Subframe2
-	Stream[0] |= COMPOSE_BITS(StartTime.Week, 19, 13);
-	Stream[0] |= COMPOSE_BITS(itow, 11, 8);
+	// WN is already included in ephemeris data (Wn_op field)
+	// ITOW is part of the TOI in subframe 1
 	// generate CRC for subframe2
 	Stream[18] = Crc24qEncode(Stream, 576) << 8;
 	LDPCEncode(Stream, bits, L1C_SUBFRAME2_SYMBOL_LENGTH, 19, L1CMatrixGen2);		// do LDPC encode
 
 	// generate CRC for subframe3
-	data = Subframe3[page];	// assume CRC has already appended to end
+	data = Subframe3[subframe3_page];	// assume CRC has already appended to end
 	LDPCEncode(data, bits + 1200, L1C_SUBFRAME3_SYMBOL_LENGTH, 9, L1CMatrixGen3);		// do LDPC encode
+
+#ifdef DEBUG_L1C
+	printf("\nSubframe 3 page %d raw data:\n", subframe3_page);
+	printf("  First word: 0x%08X (Message type: %d)\n", data[0], data[0] >> 26);
+	printf("  CRC location: words 7-8\n");
+	printf("  Word 7: 0x%08X, Word 8: 0x%08X\n", data[7], data[8]);
+	
+	// Check LDPC output
+	int ones_count = 0;
+	for (i = 0; i < 1748; i++) {
+		if (bits[i]) ones_count++;
+	}
+	printf("\nLDPC output statistics:\n");
+	printf("  Total bits: 1748 (1200 SF2 + 548 SF3)\n");
+	printf("  Ones count: %d (%.1f%%)\n", ones_count, ones_count * 100.0 / 1748);
+#endif
 
 	// do interleaving
 	p = NavBits + 52;
@@ -1069,6 +1102,16 @@ int CNav2Bit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBit
 	AssignBits(value, 19, NavBits + 1);
 	value = (unsigned int)(BCH_toi_table[toi & 0xff]);
 	AssignBits(value, 32, NavBits + 20);
+	
+#ifdef DEBUG_L1C
+	printf("\nFinal navigation bits (first 100):\n");
+	for (i = 0; i < 100; i++) {
+		printf("%d", NavBits[i]);
+		if ((i + 1) % 50 == 0) printf("\n");
+	}
+	printf("\n");
+#endif
+	
 	return 0;
 }
 
@@ -1076,9 +1119,22 @@ int CNav2Bit::SetEphemeris(int svid, PGPS_EPHEMERIS Eph)
 {
 	if (svid < 1 || svid > 32 || !Eph || !Eph->valid)
 		return 0;
+	
+	// Note: L1C can use ephemeris from any source (LNAV, CNAV, or CNAV2)
+	// The orbital parameters are the same, only the navigation message format differs
+	
 	ComposeSubframe2(Eph, Subframe2[svid-1]);
+	
+	// Note: In CNAV-2, ephemeris data is transmitted in every frame's subframe 2
+	// Unlike L2C/L5 CNAV, there are no separate message types 10 and 11
+	// Subframe 3 is used for other variable data (almanac, ionosphere, etc.)
+	
 	return svid;
 }
+
+// Removed ComposeMessageType10/11 - CNAV-2 doesn't use message types 10/11
+// Ephemeris data is transmitted in every frame's subframe 2
+
 
 // 576 bits subframe information divided int 18 DWORDs
 // each DWORD has 32bits with bit order MSB first and least index first
@@ -1089,13 +1145,35 @@ void CNav2Bit::ComposeSubframe2(PGPS_EPHEMERIS Eph, unsigned int Subframe2[18])
 	long long int LongValue;
 	unsigned long long int ULongValue;
 
-	Subframe2[0] = COMPOSE_BITS(Eph->top / 300, 0, 11);
-	Subframe2[1] = (Eph->health & 0x100) ? 0x80000000 : 0;
-	Subframe2[1] |= COMPOSE_BITS(Eph->ura, 26, 5);
-	Subframe2[1] |= COMPOSE_BITS(Eph->toe / 300, 15, 11);
-	IntValue = UnscaleInt(Eph->axis - 26559710.0, -9);	// deltaA
-	Subframe2[1] |= COMPOSE_BITS(IntValue >> 15, 0, 15);
-	Subframe2[2] = COMPOSE_BITS(IntValue, 21, 11);
+	// Clear all words first
+	memset(Subframe2, 0, 18 * sizeof(unsigned int));
+	
+#ifdef DEBUG_L1C
+	printf("\n=== L1C ComposeSubframe2 Debug for PRN %d ===\n", Eph->svid);
+	printf("Input ephemeris data:\n");
+	printf("  valid: 0x%02X, source: %d\n", Eph->valid, Eph->source);
+	printf("  week: %d, toe: %d, top: %d\n", Eph->week, Eph->toe, Eph->top);
+	printf("  health: 0x%04X, ura: %d\n", Eph->health, Eph->ura);
+	printf("  axis: %.3f m, axis_dot: %.6e m/s\n", Eph->axis, Eph->axis_dot);
+	printf("  M0: %.6f rad, ecc: %.9f\n", Eph->M0, Eph->ecc);
+	printf("  omega0: %.6f rad, i0: %.6f rad, w: %.6f rad\n", Eph->omega0, Eph->i0, Eph->w);
+	printf("  af0: %.6e s, af1: %.6e s/s, af2: %.6e s/s²\n", Eph->af0, Eph->af1, Eph->af2);
+	printf("  tgd: %.6e s\n", Eph->tgd);
+#endif
+	
+	// PRN number (6 bits) at bits 0-5 (MSB first)
+	Subframe2[0] = COMPOSE_BITS(Eph->svid, 26, 6);
+	// top (11 bits) at bits 6-16
+	Subframe2[0] |= COMPOSE_BITS(Eph->top / 300, 15, 11);
+	// Health bit at bit 17 (bit 14 of word 0)
+	Subframe2[0] |= ((Eph->health & 0x100) ? 1 : 0) << 14;
+	// URA (5 bits) at bits 18-22 (bits 13-9 of word 0)
+	Subframe2[0] |= COMPOSE_BITS(Eph->ura, 9, 5);
+	// toe (11 bits) at bits 23-33 (bits 8-0 of word 0 + bits 31-30 of word 1)
+	Subframe2[0] |= COMPOSE_BITS(Eph->toe / 300 >> 2, 0, 9);
+	Subframe2[1] = COMPOSE_BITS(Eph->toe / 300, 30, 2);
+	IntValue = UnscaleInt(Eph->axis - GPS_A_REF, -9);	// deltaA (26 bits) at bits 34-59
+	Subframe2[1] |= COMPOSE_BITS(IntValue, 4, 26);	// deltaA uses bits 29-4 of word 1
 	IntValue = UnscaleInt(Eph->axis_dot, -21);	// Adot
 	Subframe2[2] |= COMPOSE_BITS(IntValue >> 4, 0, 21);
 	Subframe2[3] = COMPOSE_BITS(IntValue, 28, 4);
@@ -1155,7 +1233,9 @@ void CNav2Bit::ComposeSubframe2(PGPS_EPHEMERIS Eph, unsigned int Subframe2[18])
 	IntValue = UnscaleInt(Eph->cuc, -30);	// cuc
 	Subframe2[13] |= COMPOSE_BITS(IntValue >> 11, 0, 10);
 	Subframe2[14] = COMPOSE_BITS(IntValue, 21, 11);
-	// URA_NED occupies 11 bits
+	// URA_NED (11 bits) at bits 444-454
+	// For now, use 0 as default URA_NED value
+	Subframe2[14] |= COMPOSE_BITS(0, 10, 11);  // URA_NED = 0
 	IntValue = UnscaleInt(Eph->af0, -35);	// af0
 	Subframe2[14] |= COMPOSE_BITS(IntValue >> 16, 0, 10);
 	Subframe2[15] = COMPOSE_BITS(IntValue, 16, 16);
@@ -1171,7 +1251,28 @@ void CNav2Bit::ComposeSubframe2(PGPS_EPHEMERIS Eph, unsigned int Subframe2[18])
 	Subframe2[17] = COMPOSE_BITS(IntValue, 24, 8);
 	IntValue = UnscaleInt(Eph->tgd - Eph->tgd_ext[0], -35);	// ISC_L1CD
 	Subframe2[17] |= COMPOSE_BITS(IntValue, 11, 13);
-	Subframe2[17] |= COMPOSE_BITS(Eph->week, 2, 8);	// Wn_op
+	Subframe2[17] |= COMPOSE_BITS(Eph->week & 0xFF, 2, 8);	// Wn_op (8 bits)
+	// Reserved bits (18 bits) at bits 558-575 are already 0 from memset
+	
+#ifdef DEBUG_L1C
+	printf("\nSubframe 2 raw data (18 DWORDs):\n");
+	for (int i = 0; i < 18; i++) {
+		printf("  Word %2d: 0x%08X\n", i, Subframe2[i]);
+	}
+	
+	// Verify critical fields
+	printf("\nVerifying critical fields:\n");
+	printf("  PRN (should be %d): %d\n", Eph->svid, (Subframe2[0] >> 26) & 0x3F);
+	printf("  t_op: %d (= %d seconds)\n", (Subframe2[0] >> 15) & 0x7FF, ((Subframe2[0] >> 15) & 0x7FF) * 300);
+	printf("  Health bit: %d\n", (Subframe2[0] >> 14) & 1);
+	printf("  URA_ED: %d\n", (Subframe2[0] >> 9) & 0x1F);
+	
+	// Check URA_NED field (bits 444-454)
+	int ura_ned_word = 444 / 32;  // Word 13
+	int ura_ned_bit = 444 % 32;   // Bit 28
+	printf("  URA_NED location: word %d, starting at bit %d\n", ura_ned_word, ura_ned_bit);
+	printf("  URA_NED value: %d\n", (Subframe2[14] >> 10) & 0x7FF);
+#endif
 }
 
 void CNav2Bit::LDPCEncode(unsigned int Stream[], int bits[], int SymbolLength, int TableSize, const unsigned int MatrixGen[])

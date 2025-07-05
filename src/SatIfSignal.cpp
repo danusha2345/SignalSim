@@ -117,6 +117,7 @@ complex_number CSatIfSignal::GetPrnValue(double& CurChip, double CodeStep)
 	complex_number PrnValue;
 	const int IsBoc = (PrnSequence->Attribute->Attribute) & PRN_ATTRIBUTE_BOC;
 	const int IsQmboc = (PrnSequence->Attribute->Attribute) & PRN_ATTRIBUTE_QMBOC;
+	const int IsTmboc = (PrnSequence->Attribute->Attribute) & PRN_ATTRIBUTE_TMBOC;
 	const int IsCboc = (PrnSequence->Attribute->Attribute) & PRN_ATTRIBUTE_CBOC;
 
 	// Validate DataLength to prevent division by zero
@@ -154,10 +155,10 @@ complex_number CSatIfSignal::GetPrnValue(double& CurChip, double CodeStep)
 		if (PilotChip >= 0 && PilotChip < PilotLength) {
 			complex_number pilotVal = PilotSignal * (PilotPrn[PilotChip] ? -1.0 : 1.0);
 			
-			// Apply TMBOC modulation for pilot channel if enabled
-			// For GPS L1C: TMBOC(6,1,4/33) - Time Multiplexed BOC
-			if (IsQmboc && IsBoc) {
-				// TMBOC(6,1,4/33) implementation for L1C pilot
+			// Apply TMBOC/QMBOC modulation for pilot channel if enabled
+			if ((IsTmboc || IsQmboc) && IsBoc) {
+				// TMBOC(6,1,4/33) implementation for GPS L1C pilot
+				// QMBOC implementation for BeiDou B1C pilot
 				// The pattern repeats every 33 spreading symbols (33 ms for L1C)
 				// 4 out of 33 symbols use BOC(6,1), others use BOC(1,1)
 				

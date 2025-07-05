@@ -210,7 +210,20 @@ int main(int argc, char* argv[])
 	// Find ephemeris match current time and fill in data to generate bit stream
 	for (i = 1; i <= TOTAL_GPS_SAT; i ++)
 	{
-		GpsEph[i-1] = NavData.FindEphemeris(GpsSystem, CurTime, i);
+		// Get the best available ephemeris (prefer CNAV2, then CNAV, then LNAV)
+		PGPS_EPHEMERIS cnav2Eph = NavData.FindEphemeris(GpsSystem, CurTime, i, EPH_SOURCE_CNV2);
+		PGPS_EPHEMERIS cnavEph = NavData.FindEphemeris(GpsSystem, CurTime, i, EPH_SOURCE_CNAV);
+		GpsEph[i-1] = NavData.FindEphemeris(GpsSystem, CurTime, i, EPH_SOURCE_LNAV);
+		
+		// Use the best available ephemeris
+		if (cnav2Eph) {
+			GpsEph[i-1] = cnav2Eph;
+		} else if (cnavEph) {
+			GpsEph[i-1] = cnavEph;
+		}
+		
+		// For L1CA/L1C/L2C/L5, all can use the same ephemeris data
+		// The navigation message format is different, but orbital parameters are the same
 		NavBitArray[DataBitLNav]->SetEphemeris(i, GpsEph[i - 1]);
 		NavBitArray[DataBitCNav]->SetEphemeris(i, GpsEph[i - 1]);
 		NavBitArray[DataBitCNav2]->SetEphemeris(i, GpsEph[i - 1]);

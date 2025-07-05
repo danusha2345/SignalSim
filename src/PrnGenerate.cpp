@@ -149,7 +149,7 @@ const int PrnGenerate::L1CPilotPhaseDiff[63] = {
 const PrnAttribute PrnGenerate::PrnAttributes[] = {
 	// ChipRate DataPeriod PilotPeriod Attribute
 	{  1023,       1,         1,                 0 },	// index  0 for L1CA
-	{  2046,      10,        10, PRN_ATTRIBUTE_BOC | PRN_ATTRIBUTE_QMBOC },	// index  1 for L1C/B1C (BOC(1,1) + QMBOC for pilot)
+	{  2046,      10,        10, PRN_ATTRIBUTE_BOC | PRN_ATTRIBUTE_QMBOC },	// index  1 for L1C (BOC(1,1) + QMBOC for pilot)
 	{  1023,      20,      1500, PRN_ATTRIBUTE_TMD },	// index  2 for L2C
 	{ 10230, 10230*2, 10230 * 2,                 0 },	// index  3 for L2P
 	{ 10230,       1,         1,                 0 },	// index  4 for L5/B2a/E5a/E5b
@@ -159,6 +159,7 @@ const PrnAttribute PrnGenerate::PrnAttributes[] = {
 	{  2046,       4,         4, PRN_ATTRIBUTE_BOC | PRN_ATTRIBUTE_CBOC },	// index  8 for E1 (CBOC(6,1,1/11))
 	{  5115,       1,         1,                 0 },	// index  9 for E6
 	{   511,       1,         1,                 0 },	// index 10 for G1/G2
+	{  2046,      10,        10, PRN_ATTRIBUTE_BOC | PRN_ATTRIBUTE_QMBOC },	// index 11 for B1C (BOC(1,1) + QMBOC for pilot)
 };
 
 LsfrSequence::LsfrSequence(unsigned int InitState, unsigned int Polynomial, int Length) : mInitState(InitState), mPolynomial(Polynomial), mOutputMask(1<<(Length-1))
@@ -255,7 +256,7 @@ PrnGenerate::PrnGenerate(GnssSystem System, int SignalIndex, int Svid)
 		case SIGNAL_INDEX_B1C: 
 			DataPrn  = GetB1CWeil(B1CDataTruncation[Svid-1], B1CDataPhaseDiff[Svid-1]);
 			PilotPrn = GetB1CWeil(B1CPilotTruncation[Svid-1], B1CPilotPhaseDiff[Svid-1]);
-			Attribute = &PrnAttributes[1];
+			Attribute = &PrnAttributes[11];  // Use index 11 for B1C with QMBOC
 			break;
 		case SIGNAL_INDEX_B2a:
 			DataPrn  = GetGoldCode(B2aDPrnInit[Svid-1], 0x1d14, 0x1fff, 0x1411, 10230, 13, 8190);
