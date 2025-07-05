@@ -363,6 +363,7 @@ void CNavBit::GetMessageData(int svid, int message, int TOW, unsigned int Data[9
 			Data[6] = (ReducedAlm[alm_index+1] << 2) + (ReducedAlm[alm_index+2] >> 29);
 			Data[7] = (ReducedAlm[alm_index+2] << 3) + (ReducedAlm[alm_index+3] >> 28);
 			Data[8] = (ReducedAlm[alm_index+3] << 4);
+			break;
 		case 33:
 			Data[4] |= UTCMessage[0]; Data[5] = UTCMessage[1]; Data[6] = UTCMessage[2]; Data[7] = UTCMessage[2];	// copy UTC fields
 			Data[8] = 0;

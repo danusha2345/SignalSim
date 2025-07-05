@@ -213,8 +213,8 @@ BOOL CSatelliteSignal::GetSatelliteSignal(GNSS_TIME TransmitTime, complex_number
 			PilotSignal = complex_number(AMPLITUDE_1_2, 0);
 			break;
 		case SIGNAL_INDEX_L5:
-			DataSignal = complex_number(0, DataBit * AMPLITUDE_1_2);
-			PilotSignal = complex_number(PilotBit * AMPLITUDE_1_2, 0);
+			DataSignal = complex_number(DataBit * AMPLITUDE_1_2, 0);    // I5 данные на реальной части
+			PilotSignal = complex_number(0, PilotBit * AMPLITUDE_1_2);  // Q5 пилот на мнимой части
 			break;
 		}
 		break;
