@@ -259,7 +259,11 @@ BOOL SetEphemerisFile(JsonObject *Object, CNavData &NavData)
 	while (Object)
 	{
 		if (strcmp(Object->Key, "name") == 0)
+		{
+			printf("[INFO]\tLoading ephemeris file: %s\n", Object->String);
 			NavData.ReadNavFile(Object->String);
+			printf("[INFO]\tEphemeris file loaded successfully: %s\n", Object->String);
+		}
 		Object = JsonStream::GetNextObject(Object);
 	}
 	return TRUE;
