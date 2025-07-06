@@ -6,3 +6,7 @@ CLAUDE.md
 *.backup
 *.py
 /.claude
+*.C8
+*.py
+*.o
+IFdataGen/IFdataGen

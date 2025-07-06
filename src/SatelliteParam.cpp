@@ -93,11 +93,13 @@ void GetSatelliteParam(KINEMATIC_INFO PositionEcef, LLA_POSITION PositionLla, GN
 	SatelliteParam->system= system;
 	if (system == BdsSystem)	// subtract leap second difference
 		time.MilliSeconds -= 14000;
-	else if (system == GlonassSystem)	// subtract leap second, add 3 hours
+	else if (system == GlonassSystem)	// GLONASS time handling
 	{
+		// GLONASS tk is already in the correct format from RINEX
+		// No time zone conversion needed
 		Seconds = (unsigned int)(time.Week * 604800 + time.MilliSeconds / 1000);
 		GetLeapSecond(Seconds, LeapSecond);
-		time.MilliSeconds = (time.MilliSeconds + 10800000 - LeapSecond * 1000) % 86400000;
+		time.MilliSeconds -= LeapSecond * 1000;
 	}
 	SatelliteTime = (time.MilliSeconds + time.SubMilliSeconds) / 1000.0;
 
@@ -183,7 +185,16 @@ void GetSatelliteParam(KINEMATIC_INFO PositionEcef, LLA_POSITION PositionLla, GN
 	SatelliteParam->TravelTime = TravelTime;
 	SatelliteParam->Elevation = Elevation;
 	SatelliteParam->Azimuth = Azimuth;
-	SatelliteParam->RelativeSpeed = SatRelativeSpeed(&PositionEcef, &SatPosition) - LIGHT_SPEED * Eph->af1;
+	// Calculate relative speed with proper clock drift correction
+	if (system == GlonassSystem)
+	{
+		// For GLONASS, use gamma (relative frequency bias) instead of af1
+		SatelliteParam->RelativeSpeed = SatRelativeSpeed(&PositionEcef, &SatPosition) - LIGHT_SPEED * GloEph->gamma;
+	}
+	else
+	{
+		SatelliteParam->RelativeSpeed = SatRelativeSpeed(&PositionEcef, &SatPosition) - LIGHT_SPEED * Eph->af1;
+	}
 }
 
 void GetSatelliteCN0(int PowerListCount, SIGNAL_POWER PowerList[], double DefaultCN0, enum ElevationAdjust Adjust, PSATELLITE_PARAM SatelliteParam)
