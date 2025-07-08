@@ -618,7 +618,7 @@ BOOL DecodeEphOrbit(NavDataType DataType, char *str, FILE *fp_nav, PGLONASS_EPHE
 	double data[19];
 
 	svid = ReadContentsTime(str, &time, &data[0]);
-	eph_time = UtcToGlonassTime(time);	// in RINEX, time is GPS time, so eph_time has bias of leap second
+	eph_time = UtcToGlonassTime_Corrected(time);	// in RINEX, time is GPS time, so eph_time has bias of leap second
 	for (i = 0; i < 3; i ++)
 	{
 		fgets(str, 128, fp_nav);
@@ -640,7 +640,30 @@ BOOL DecodeEphOrbit(NavDataType DataType, char *str, FILE *fp_nav, PGLONASS_EPHE
 	Eph->P = 0xc0;  // P=11, ln=0, P4=0, P3=0, P2=0, P1=00 (will update P2 after tb)
 	Eph->M = 1;		// assume GLONASS-M satellite
 	Eph->Ft = 0;	// no data
-	Eph->day = (unsigned short)(eph_time.Day);
+	
+	// Calculate day in year from total day since epoch
+	// eph_time.Day is days since 1996, we need day in current year (1-366)
+	int totalDays = eph_time.Day - 1;  // Convert to 0-based
+	int cycleNumber = totalDays / 1461;  // Number of complete 4-year cycles
+	int dayInCycle = totalDays % 1461;   // Day within current 4-year cycle
+	int dayInYear;
+	
+	// Determine day in year based on position in 4-year cycle
+	if (dayInCycle < 366) {
+		// First year (leap year)
+		dayInYear = dayInCycle + 1;
+	} else if (dayInCycle < 366 + 365) {
+		// Second year
+		dayInYear = dayInCycle - 366 + 1;
+	} else if (dayInCycle < 366 + 365 * 2) {
+		// Third year
+		dayInYear = dayInCycle - (366 + 365) + 1;
+	} else {
+		// Fourth year
+		dayInYear = dayInCycle - (366 + 365 * 2) + 1;
+	}
+	
+	Eph->day = (unsigned short)dayInYear;
 	Eph->tb = ((int)(eph_time.MilliSeconds) + 450000) / 900000 * 900;	// when align to 900 second, leap second bias eleminated
 	// Update P2 bit based on tb (P2 = 1 if tb interval number is odd)
 	if ((Eph->tb / 900) & 1)

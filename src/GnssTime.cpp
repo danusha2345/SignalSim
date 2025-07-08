@@ -6,7 +6,6 @@
 //
 //----------------------------------------------------------------------
 #include <math.h>
-#include <stdio.h>
 
 #include "ConstVal.h"
 #include "BasicTypes.h"
@@ -38,7 +37,7 @@ BOOL GetLeapSecond(unsigned int Seconds, int &LeapSecond)
 
 // This program handles the date from Jan. 1, 1984 00:00:00.00 UTC till year 2099
 // date after 2020/12/31 may not have correct leap second correction
-UTC_TIME GpsTimeToUtc(GNSS_TIME GnssTime, BOOL UseLeapSecond = TRUE)
+UTC_TIME GpsTimeToUtc(GNSS_TIME GnssTime, BOOL UseLeapSecond)
 {
 	int Days, LeapSecond = 0;
 	BOOL AtLeapSecond = UseLeapSecond;
@@ -73,7 +72,7 @@ UTC_TIME GpsTimeToUtc(GNSS_TIME GnssTime, BOOL UseLeapSecond = TRUE)
 	return time;
 }
 
-GNSS_TIME UtcToGpsTime(UTC_TIME UtcTime, BOOL UseLeapSecond = TRUE)
+GNSS_TIME UtcToGpsTime(UTC_TIME UtcTime, BOOL UseLeapSecond)
 {
 	GLONASS_TIME GlonassTime;
 	GNSS_TIME time;
@@ -83,18 +82,7 @@ GNSS_TIME UtcToGpsTime(UTC_TIME UtcTime, BOOL UseLeapSecond = TRUE)
 	unsigned int TotalSeconds, TempSeconds;
 
 	GlonassTime = UtcToGlonassTime(UtcTime);
-	// GLONASS time is from 1996, GPS time is from 1980 (6 Jan)
-	// Difference is 16 years = 4 full 4-year cycles = 4 * 1461 = 5844 days
-	// Plus we need to subtract 6 days because GPS epoch starts on Jan 6, not Jan 1
-	TotalDays = GlonassTime.LeapYear * 1461 + GlonassTime.Day + 5844 - 6;
-	
-	// Debug
-	static bool gpsDebugShown = false;
-	if (!gpsDebugShown) {
-		printf("[DEBUG] UtcToGpsTime: GlonassTime.Day=%d, TotalDays=%d\n", 
-			GlonassTime.Day, TotalDays);
-		gpsDebugShown = true;
-	}
+	TotalDays = (GlonassTime.LeapYear + 3) * (366 + 365 * 3) + GlonassTime.Day - 6;
 	TotalSeconds = TempSeconds = TotalDays * 86400 + GlonassTime.MilliSeconds / 1000 - 10800;
 //	time.MilliSeconds = TotalDays * 86400 + GlonassTime.Seconds - 10800.;
 //	Seconds = (unsigned int)time.Seconds;
@@ -161,7 +149,7 @@ UTC_TIME GlonassTimeToUtc(GLONASS_TIME GlonassTime)
 		time.Month = i;
 		time.Day = GlonassTime.Day - (DaysAcc[i-1] - 1);
 	}
-	time.Year = 1996 + GlonassTime.LeapYear;
+	time.Year = 1992 + GlonassTime.LeapYear;
 	Seconds = GlonassTime.MilliSeconds / 1000;
 	time.Hour = Seconds / 3600;
 	Seconds -= time.Hour * 3600;
@@ -173,6 +161,25 @@ UTC_TIME GlonassTimeToUtc(GLONASS_TIME GlonassTime)
 }
 
 GLONASS_TIME UtcToGlonassTime(UTC_TIME UtcTime)
+{
+	int Years, Days;
+	GLONASS_TIME time;
+	double MilliSeconds = (UtcTime.Second * 1000);
+
+	time.MilliSeconds = (((UtcTime.Hour * 60) + UtcTime.Minute) * 60000 + (int)MilliSeconds) + 10800000;
+	time.SubMilliSeconds = MilliSeconds - (int)MilliSeconds;
+	Years = UtcTime.Year - 1992;
+	Days = DaysAcc[UtcTime.Month - 1] + UtcTime.Day - 1;
+	if ((Years % 4) != 0 || Days >= 59)
+		Days ++;
+	Days += (Years % 4) * 365;
+	time.Day = Days + 1;
+	time.LeapYear = Years / 4;
+
+	return time;
+}
+
+GLONASS_TIME UtcToGlonassTime_Corrected(UTC_TIME UtcTime)
 {
 	int Years, Days;
 	GLONASS_TIME time;
@@ -202,23 +209,15 @@ GLONASS_TIME UtcToGlonassTime(UTC_TIME UtcTime)
 	}
 	
 	// Calculate total day number from epoch
-	time.Day = Days + (Years / 4) * 1461;
+	time.Day = Days + 1 + (Years / 4) * 1461;
 	time.LeapYear = Years / 4;
-	
-	// Debug output
-	static bool debugShown = false;
-	if (!debugShown) {
-		printf("[DEBUG] UtcToGlonassTime: Years=%d, YearsInCycle=%d, Days=%d, time.Day=%d\n",
-			Years, YearsInCycle, Days, time.Day);
-		debugShown = true;
-	}
 
 	return time;
 }
 
 GNSS_TIME UtcToBdsTime(UTC_TIME UtcTime)
 {
-	GNSS_TIME time = UtcToGpsTime(UtcTime);
+	GNSS_TIME time = UtcToGpsTime(UtcTime, TRUE);
 
 	if (time.MilliSeconds >= 14000)
 	{
@@ -236,7 +235,7 @@ GNSS_TIME UtcToBdsTime(UTC_TIME UtcTime)
 
 GNSS_TIME UtcToGalileoTime(UTC_TIME UtcTime)
 {
-	GNSS_TIME time = UtcToGpsTime(UtcTime);
+	GNSS_TIME time = UtcToGpsTime(UtcTime, TRUE);
 
 	time.Week -= 1024;
 	return time;
@@ -246,11 +245,11 @@ UTC_TIME BdsTimeToUtc(GNSS_TIME GnssTime)
 {
 	GnssTime.MilliSeconds += 14000;
 	GnssTime.Week += 1356;
-	return GpsTimeToUtc(GnssTime);
+	return GpsTimeToUtc(GnssTime, TRUE);
 }
 
 UTC_TIME GalileoTimeToUtc(GNSS_TIME GnssTime)
 {
 	GnssTime.Week += 1024;
-	return GpsTimeToUtc(GnssTime);
+	return GpsTimeToUtc(GnssTime, TRUE);
 }

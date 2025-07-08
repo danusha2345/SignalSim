@@ -119,7 +119,7 @@ int main(int argc, char* argv[])
 	// initial variables
  	Trajectory.ResetTrajectoryTime();
 	CurTime = UtcToGpsTime(UtcTime);
-	GlonassTime = UtcToGlonassTime(UtcTime);
+	GlonassTime = UtcToGlonassTime_Corrected(UtcTime);
 	BdsTime = UtcToBdsTime(UtcTime);
 	CurPos = LlaToEcef(StartPos);
 	SpeedLocalToEcef(StartPos, StartVel, CurPos);
@@ -234,7 +234,7 @@ int main(int argc, char* argv[])
 	{
 		// Get the best available ephemeris
 		// Use the original 4-parameter calls but in correct order
-		GpsEph[i-1] = NavData.FindEphemeris(GpsSystem, CurTime, i, 0);
+		GpsEph[i-1] = NavData.FindEphemeris(GpsSystem, CurTime, i, 0, 0);
 		
 		// For L1CA/L1C/L2C/L5, all can use the same ephemeris data
 		// The navigation message format is different, but orbital parameters are the same
@@ -244,7 +244,7 @@ int main(int argc, char* argv[])
 	}
 	for (i = 1; i <= TOTAL_BDS_SAT; i ++)
 	{
-		BdsEph[i-1] = NavData.FindEphemeris(BdsSystem, BdsTime, i, 0);
+		BdsEph[i-1] = NavData.FindEphemeris(BdsSystem, BdsTime, i, 0, 0);
 		NavBitArray[DataBitD1D2]->SetEphemeris(i, BdsEph[i - 1]);
 		NavBitArray[DataBitBCNav1]->SetEphemeris(i, BdsEph[i - 1]);
 		NavBitArray[DataBitBCNav2]->SetEphemeris(i, BdsEph[i - 1]);
@@ -252,7 +252,7 @@ int main(int argc, char* argv[])
 	}
 	for (i = 1; i <= TOTAL_GAL_SAT; i++)
 	{
-		GalEph[i - 1] = NavData.FindEphemeris(GalileoSystem, CurTime, i, 0);
+		GalEph[i - 1] = NavData.FindEphemeris(GalileoSystem, CurTime, i, 0, 0);
 		NavBitArray[DataBitINav]->SetEphemeris(i, GalEph[i - 1]);
 		NavBitArray[DataBitFNav]->SetEphemeris(i, GalEph[i - 1]);
 	}
@@ -743,7 +743,7 @@ int StepToNextMs()
 	if ((CurTime.MilliSeconds % 60000) == 0)
 	{
 		UTC_TIME UtcTime = GpsTimeToUtc(CurTime);
-		GLONASS_TIME GlonassTime = UtcToGlonassTime(UtcTime);
+		GLONASS_TIME GlonassTime = UtcToGlonassTime_Corrected(UtcTime);
 		GpsSatNumber = (OutputParam.FreqSelect[GpsSystem]) ? GetVisibleSatellite(CurPos, CurTime, OutputParam, GpsSystem, GpsEph, TOTAL_GPS_SAT, GpsEphVisible) : 0;
 		BdsSatNumber = (OutputParam.FreqSelect[BdsSystem]) ? GetVisibleSatellite(CurPos, CurTime, OutputParam, BdsSystem, BdsEph, TOTAL_BDS_SAT, BdsEphVisible) : 0;
 		GalSatNumber = (OutputParam.FreqSelect[GalileoSystem]) ? GetVisibleSatellite(CurPos, CurTime, OutputParam, GalileoSystem, GalEph, TOTAL_GAL_SAT, GalEphVisible) : 0;

@@ -18,6 +18,7 @@ UTC_TIME BdsTimeToUtc(GNSS_TIME GnssTime);
 UTC_TIME GalileoTimeToUtc(GNSS_TIME GnssTime);
 GNSS_TIME UtcToGpsTime(UTC_TIME UtcTime, BOOL UseLeapSecond = TRUE);
 GLONASS_TIME UtcToGlonassTime(UTC_TIME UtcTime);
+GLONASS_TIME UtcToGlonassTime_Corrected(UTC_TIME UtcTime);
 GNSS_TIME UtcToBdsTime(UTC_TIME UtcTime);
 GNSS_TIME UtcToGalileoTime(UTC_TIME UtcTime);
 

@@ -237,12 +237,29 @@ PGLONASS_EPHEMERIS CNavData::FindGloEphemeris(GLONASS_TIME GlonassTime, int slot
 	{
 		if (slot != (int)GlonassEphemerisPool[i].n)
 			continue;
-		diff = GlonassTime.Day - GlonassEphemerisPool[i].day;
-		// day range between -730~730
-		if (diff > 730)
-			diff -= 1461;
-		else if (diff < -730)
-			diff += 1461;
+		
+		// Convert GlonassTime.Day to day in year for comparison
+		int totalDays = GlonassTime.Day - 1;  // Convert to 0-based
+		int dayInCycle = totalDays % 1461;    // Day within current 4-year cycle
+		int requestDayInYear;
+		
+		// Determine day in year based on position in 4-year cycle
+		if (dayInCycle < 366) {
+			requestDayInYear = dayInCycle + 1;
+		} else if (dayInCycle < 366 + 365) {
+			requestDayInYear = dayInCycle - 366 + 1;
+		} else if (dayInCycle < 366 + 365 * 2) {
+			requestDayInYear = dayInCycle - (366 + 365) + 1;
+		} else {
+			requestDayInYear = dayInCycle - (366 + 365 * 2) + 1;
+		}
+		
+		diff = requestDayInYear - GlonassEphemerisPool[i].day;
+		// Handle year boundary (e.g., day 365 to day 1)
+		if (diff > 183)
+			diff -= 365;
+		else if (diff < -183)
+			diff += 365;
 		diff = diff * 86400 + (GlonassTime.MilliSeconds / 1000 - GlonassEphemerisPool[i].tb);
 		if (diff < 0)
 			diff = -diff;
