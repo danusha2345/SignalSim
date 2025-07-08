@@ -6,6 +6,7 @@
 //
 //----------------------------------------------------------------------
 #include <math.h>
+#include <stdio.h>
 
 #include "ConstVal.h"
 #include "BasicTypes.h"
@@ -82,7 +83,18 @@ GNSS_TIME UtcToGpsTime(UTC_TIME UtcTime, BOOL UseLeapSecond = TRUE)
 	unsigned int TotalSeconds, TempSeconds;
 
 	GlonassTime = UtcToGlonassTime(UtcTime);
-	TotalDays = (GlonassTime.LeapYear + 3) * (366 + 365 * 3) + GlonassTime.Day - 6;
+	// GLONASS time is from 1996, GPS time is from 1980 (6 Jan)
+	// Difference is 16 years = 4 full 4-year cycles = 4 * 1461 = 5844 days
+	// Plus we need to subtract 6 days because GPS epoch starts on Jan 6, not Jan 1
+	TotalDays = GlonassTime.LeapYear * 1461 + GlonassTime.Day + 5844 - 6;
+	
+	// Debug
+	static bool gpsDebugShown = false;
+	if (!gpsDebugShown) {
+		printf("[DEBUG] UtcToGpsTime: GlonassTime.Day=%d, TotalDays=%d\n", 
+			GlonassTime.Day, TotalDays);
+		gpsDebugShown = true;
+	}
 	TotalSeconds = TempSeconds = TotalDays * 86400 + GlonassTime.MilliSeconds / 1000 - 10800;
 //	time.MilliSeconds = TotalDays * 86400 + GlonassTime.Seconds - 10800.;
 //	Seconds = (unsigned int)time.Seconds;
@@ -190,8 +202,16 @@ GLONASS_TIME UtcToGlonassTime(UTC_TIME UtcTime)
 	}
 	
 	// Calculate total day number from epoch
-	time.Day = Days + 1 + (Years / 4) * 1461;
+	time.Day = Days + (Years / 4) * 1461;
 	time.LeapYear = Years / 4;
+	
+	// Debug output
+	static bool debugShown = false;
+	if (!debugShown) {
+		printf("[DEBUG] UtcToGlonassTime: Years=%d, YearsInCycle=%d, Days=%d, time.Day=%d\n",
+			Years, YearsInCycle, Days, time.Day);
+		debugShown = true;
+	}
 
 	return time;
 }

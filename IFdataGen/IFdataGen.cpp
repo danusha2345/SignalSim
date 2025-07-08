@@ -124,6 +124,12 @@ int main(int argc, char* argv[])
 	CurPos = LlaToEcef(StartPos);
 	SpeedLocalToEcef(StartPos, StartVel, CurPos);
 	
+	// Debug time conversion
+	printf("[DEBUG] UTC Time: %04d-%02d-%02d %02d:%02d:%02d\n", 
+		UtcTime.Year, UtcTime.Month, UtcTime.Day, UtcTime.Hour, UtcTime.Minute, UtcTime.Second);
+	printf("[DEBUG] GPS Time: Week=%d, MS=%d (%.1f seconds in week)\n", 
+		CurTime.Week, CurTime.MilliSeconds, CurTime.MilliSeconds / 1000.0);
+	
 	printf("[INFO]\tOpening output file: %s\n", OutputParam.filename);
 	if ((IfFile = fopen(OutputParam.filename, "wb")) == NULL)
 	{
@@ -226,17 +232,9 @@ int main(int argc, char* argv[])
 	// Find ephemeris match current time and fill in data to generate bit stream
 	for (i = 1; i <= TOTAL_GPS_SAT; i ++)
 	{
-		// Get the best available ephemeris (prefer CNAV2, then CNAV, then LNAV)
-		PGPS_EPHEMERIS cnav2Eph = NavData.FindEphemeris(GpsSystem, CurTime, i, EPH_SOURCE_CNV2);
-		PGPS_EPHEMERIS cnavEph = NavData.FindEphemeris(GpsSystem, CurTime, i, EPH_SOURCE_CNAV);
-		GpsEph[i-1] = NavData.FindEphemeris(GpsSystem, CurTime, i, EPH_SOURCE_LNAV);
-		
-		// Use the best available ephemeris
-		if (cnav2Eph) {
-			GpsEph[i-1] = cnav2Eph;
-		} else if (cnavEph) {
-			GpsEph[i-1] = cnavEph;
-		}
+		// Get the best available ephemeris
+		// Use the original 4-parameter calls but in correct order
+		GpsEph[i-1] = NavData.FindEphemeris(GpsSystem, CurTime, i, 0);
 		
 		// For L1CA/L1C/L2C/L5, all can use the same ephemeris data
 		// The navigation message format is different, but orbital parameters are the same
@@ -246,7 +244,7 @@ int main(int argc, char* argv[])
 	}
 	for (i = 1; i <= TOTAL_BDS_SAT; i ++)
 	{
-		BdsEph[i-1] = NavData.FindEphemeris(BdsSystem, BdsTime, i);
+		BdsEph[i-1] = NavData.FindEphemeris(BdsSystem, BdsTime, i, 0);
 		NavBitArray[DataBitD1D2]->SetEphemeris(i, BdsEph[i - 1]);
 		NavBitArray[DataBitBCNav1]->SetEphemeris(i, BdsEph[i - 1]);
 		NavBitArray[DataBitBCNav2]->SetEphemeris(i, BdsEph[i - 1]);
@@ -254,7 +252,7 @@ int main(int argc, char* argv[])
 	}
 	for (i = 1; i <= TOTAL_GAL_SAT; i++)
 	{
-		GalEph[i - 1] = NavData.FindEphemeris(GalileoSystem, CurTime, i);
+		GalEph[i - 1] = NavData.FindEphemeris(GalileoSystem, CurTime, i, 0);
 		NavBitArray[DataBitINav]->SetEphemeris(i, GalEph[i - 1]);
 		NavBitArray[DataBitFNav]->SetEphemeris(i, GalEph[i - 1]);
 	}
@@ -274,6 +272,15 @@ int main(int argc, char* argv[])
 	NavBitArray[DataBitINav]->SetAlmanac(NavData.GetGalileoAlmanac());
 	NavBitArray[DataBitFNav]->SetAlmanac(NavData.GetGalileoAlmanac());
 	NavBitArray[DataBitGNav]->SetAlmanac((PGPS_ALMANAC)NavData.GetGlonassAlmanac());
+
+	// Debug: count loaded ephemerides
+	int gpsEphCount = 0, bdsEphCount = 0, galEphCount = 0, gloEphCount = 0;
+	for (i = 0; i < TOTAL_GPS_SAT; i++) if (GpsEph[i] != NULL) gpsEphCount++;
+	for (i = 0; i < TOTAL_BDS_SAT; i++) if (BdsEph[i] != NULL) bdsEphCount++;
+	for (i = 0; i < TOTAL_GAL_SAT; i++) if (GalEph[i] != NULL) galEphCount++;
+	for (i = 0; i < TOTAL_GLO_SAT; i++) if (GloEph[i] != NULL) gloEphCount++;
+	printf("[DEBUG]\tLoaded ephemerides: GPS=%d/%d, BDS=%d/%d, GAL=%d/%d, GLO=%d/%d\n", 
+		gpsEphCount, TOTAL_GPS_SAT, bdsEphCount, TOTAL_BDS_SAT, galEphCount, TOTAL_GAL_SAT, gloEphCount, TOTAL_GLO_SAT);
 
 	// calculate visible satellite at start time and calculate satellite parameters
 	GpsSatNumber = (OutputParam.FreqSelect[GpsSystem]) ? GetVisibleSatellite(CurPos, CurTime, OutputParam, GpsSystem, GpsEph, TOTAL_GPS_SAT, GpsEphVisible) : 0;

@@ -6,6 +6,7 @@
 //
 //----------------------------------------------------------------------
 #include <math.h>
+#include <stdio.h>
 
 #include "ConstVal.h"
 #include "BasicTypes.h"
@@ -74,6 +75,14 @@ bool GpsSatPosSpeedEph(GnssSystem system, double TransmitTime, PGPS_EPHEMERIS pE
 		delta_t -= 604800;
 	if (delta_t < -302400.0)
 		delta_t += 604800;
+		
+	// Debug output for first few satellites
+	static int debugCount = 0;
+	if (debugCount < 5 && system == GpsSystem) {
+		printf("[DEBUG] GPS SV%d: TransmitTime=%.1f, toe=%d, delta_t=%.1f (before correction)\n", 
+			pEph->svid, TransmitTime, pEph->toe, delta_t);
+		debugCount++;
+	}
 
 	// get Ek from Mk with recursive algorithm
 	alpha = pEph->delta_n_dot * delta_t;

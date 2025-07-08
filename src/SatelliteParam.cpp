@@ -21,35 +21,73 @@ int GetVisibleSatellite(KINEMATIC_INFO Position, GNSS_TIME time, OUTPUT_PARAM Ou
 	int SatNumber = 0;
 	KINEMATIC_INFO SatPosition;
 	double Elevation, Azimuth;
+	
+	// Debug counters
+	int nullCount = 0, invalidCount = 0, unhealthyCount = 0, maskedCount = 0, posFailCount = 0, belowElevCount = 0;
+	
+	// Debug time
+	static bool timeDebugShown = false;
+	if (!timeDebugShown && system == GpsSystem) {
+		printf("[DEBUG] GetVisibleSatellite called with time: Week=%d, MS=%d (%.1f seconds)\n", 
+			time.Week, time.MilliSeconds, time.MilliSeconds / 1000.0);
+		timeDebugShown = true;
+	}
 
 	for (i = 0; i < Number; i ++)
 	{
-		if (Eph[i] == NULL || (Eph[i]->valid & 1) == 0 || Eph[i]->health != 0)
+		if (Eph[i] == NULL) {
+			nullCount++;
 			continue;
+		}
+		if ((Eph[i]->valid & 1) == 0) {
+			invalidCount++;
+			continue;
+		}
+		if (Eph[i]->health != 0) {
+			unhealthyCount++;
+			continue;
+		}
 		if (system == GpsSystem)
 		{
-			if (OutputParam.GpsMaskOut & (1 << i))
+			if (OutputParam.GpsMaskOut & (1 << i)) {
+				maskedCount++;
 				continue;
+			}
 		}
 		else if (system == BdsSystem)
 		{
-			if (OutputParam.BdsMaskOut & (1LL << i))
+			if (OutputParam.BdsMaskOut & (1LL << i)) {
+				maskedCount++;
 				continue;
+			}
 		}
 		else if (system == GalileoSystem)
 		{
-			if (OutputParam.GalileoMaskOut & (1LL << i))
+			if (OutputParam.GalileoMaskOut & (1LL << i)) {
+				maskedCount++;
 				continue;
+			}
 		}
 		else
 			continue;
-		if (!GpsSatPosSpeedEph(system, time.MilliSeconds / 1000., Eph[i], &SatPosition, NULL))
+		if (!GpsSatPosSpeedEph(system, time.MilliSeconds / 1000., Eph[i], &SatPosition, NULL)) {
+			posFailCount++;
 			continue;
+		}
 		SatElAz(&Position, &SatPosition, &Elevation, &Azimuth);
-		if (Elevation < OutputParam.ElevationMask)
+		if (Elevation < OutputParam.ElevationMask) {
+			belowElevCount++;
 			continue;
+		}
 		EphVisible[SatNumber ++] = Eph[i];
 	}
+	
+	// Debug output
+	const char* sysName = (system == GpsSystem) ? "GPS" : 
+	                      (system == BdsSystem) ? "BDS" : 
+	                      (system == GalileoSystem) ? "GAL" : "GLO";
+	printf("[DEBUG]\t%s visibility check: null=%d, invalid=%d, unhealthy=%d, masked=%d, posFail=%d, belowElev=%d, visible=%d\n",
+		sysName, nullCount, invalidCount, unhealthyCount, maskedCount, posFailCount, belowElevCount, SatNumber);
 
 	return SatNumber;
 }
