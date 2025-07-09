@@ -27,7 +27,7 @@
 		"trajectoryList": [
 			{
 				"type": "Const",
-				"time": 30.0
+				"time": 90.0
 			}
 		]
 	},
@@ -38,9 +38,9 @@
 	"output": {
 		"type": "IFdata",
 		"format": "IQ8",
-		"sampleFreq": 10.23,
+		"sampleFreq": 11,
 		"centerFreq": 1227.6,
-		"name": "generated_files/GPS_L2P_test_30s.C8",
+		"name": "generated_files/GPS_L2P_test.C8",
 		"config": {
 			"elevationMask": 5
 		},

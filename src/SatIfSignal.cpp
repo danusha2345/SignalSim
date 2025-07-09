@@ -34,6 +34,11 @@ CSatIfSignal::CSatIfSignal(int MsSampleNumber, int SatIfFreq, GnssSystem SatSyst
 		DataLength = 10230;      // GetGoldCode(..., 10230, ...)
 		PilotLength = 10230 * 75; // GetGoldCode(..., 10230*75, ...)
 	}
+	if (System == GpsSystem && SignalIndex == SIGNAL_INDEX_L2P) {
+		// GPS L2P uses simplified P-code with fixed array size
+		DataLength = 10230 * 2;  // GetSimplifiedPCode creates 20460 chips
+		PilotLength = 1;         // L2P has no pilot signal
+	}
 	
 	// Ensure positive lengths
 	if (DataLength <= 0) DataLength = 1;

@@ -151,7 +151,7 @@ const PrnAttribute PrnGenerate::PrnAttributes[] = {
 	{  1023,       1,         1,                 0 },	// index  0 for L1CA
 	{  2046,      10,        10, PRN_ATTRIBUTE_BOC | PRN_ATTRIBUTE_QMBOC },	// index  1 for L1C (BOC(1,1) + QMBOC for pilot)
 	{  1023,      20,      1500, PRN_ATTRIBUTE_TMD },	// index  2 for L2C
-	{ 10230, 10230*2, 10230 * 2,                 0 },	// index  3 for L2P
+	{ 10230,       2,         2,                 0 },	// index  3 for L2P
 	{ 10230,       1,         1,                 0 },	// index  4 for L5/B2a/E5a/E5b
 	{  2046,       1,         1,                 0 },	// index  5 for B1I/B2I
 	{ 10230,       1,         1,                 0 },	// index  6 for B3I

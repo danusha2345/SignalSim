@@ -79,6 +79,9 @@ BOOL CSatelliteSignal::SetSignalAttribute(GnssSystem System, int SignalIndex, Na
 		case SIGNAL_INDEX_L5:
 			Attribute = &SignalAttributes[3];
 			return NavData ? ((typeid(*NavData) == typeid(CNavBit)) ? TRUE : FALSE) : TRUE;
+		case SIGNAL_INDEX_L2P:
+			Attribute = &SignalAttributes[0];  // L2P uses same navigation message format as L1CA (LNAV)
+			return NavData ? ((typeid(*NavData) == typeid(LNavBit)) ? TRUE : FALSE) : TRUE;
 		default: return FALSE;	// unknown FreqIndex
 		}
 	case BdsSystem:
@@ -215,6 +218,10 @@ BOOL CSatelliteSignal::GetSatelliteSignal(GNSS_TIME TransmitTime, complex_number
 		case SIGNAL_INDEX_L5:
 			DataSignal = complex_number(DataBit * AMPLITUDE_1_2, 0);    // I5 данные на реальной части
 			PilotSignal = complex_number(0, PilotBit * AMPLITUDE_1_2);  // Q5 пилот на мнимой части
+			break;
+		case SIGNAL_INDEX_L2P:
+			DataSignal = complex_number((double)DataBit, 0);  // L2P has only data channel
+			PilotSignal = complex_number(0, 0);  // No pilot
 			break;
 		}
 		break;
