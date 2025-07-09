@@ -27,7 +27,7 @@
 		"trajectoryList": [
 			{
 				"type": "Const",
-				"time": 180.0
+				"time": 300.0
 			}
 		]
 	},
@@ -40,7 +40,7 @@
 		"format": "IQ8",
 		"sampleFreq": 5.0,
 		"centerFreq": 1575.42,
-		"name": "generated_files/BDS_B1C_only_3min.C8",
+		"name": "generated_files/BDS_B1C_only_5min.C8",
 		"config": {
 			"elevationMask": 5
 		},
