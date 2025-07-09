@@ -212,8 +212,9 @@ BOOL CSatelliteSignal::GetSatelliteSignal(GNSS_TIME TransmitTime, complex_number
 			PilotSignal = complex_number(PilotBit * AMPLITUDE_3_4, 0);
 			break;
 		case SIGNAL_INDEX_L2C:
-			DataSignal = complex_number(DataBit * AMPLITUDE_1_2, 0);
-			PilotSignal = complex_number(AMPLITUDE_1_2, 0);
+			// For TDM signals, each component uses full power when transmitted
+			DataSignal = complex_number((double)DataBit, 0);
+			PilotSignal = complex_number(1.0, 0);
 			break;
 		case SIGNAL_INDEX_L5:
 			DataSignal = complex_number(DataBit * AMPLITUDE_1_2, 0);    // I5 данные на реальной части

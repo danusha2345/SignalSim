@@ -10,3 +10,7 @@ CLAUDE.md
 *.py
 *.o
 IFdataGen/IFdataGen
+.env
+docs/GPS_L2P_Receiver_Detection_Issues.md
+docs/GPS_L2C_Analysis.md
+docs/GPS_L2C_Technical_Analysis.md

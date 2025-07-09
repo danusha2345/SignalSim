@@ -124,6 +124,7 @@ complex_number CSatIfSignal::GetPrnValue(double& CurChip, double CodeStep)
 	const int IsQmboc = (PrnSequence->Attribute->Attribute) & PRN_ATTRIBUTE_QMBOC;
 	const int IsTmboc = (PrnSequence->Attribute->Attribute) & PRN_ATTRIBUTE_TMBOC;
 	const int IsCboc = (PrnSequence->Attribute->Attribute) & PRN_ATTRIBUTE_CBOC;
+	const int IsTdm = (PrnSequence->Attribute->Attribute) & PRN_ATTRIBUTE_TMD;
 
 	// Validate DataLength to prevent division by zero
 	if (DataLength <= 0) {
@@ -135,6 +136,33 @@ complex_number CSatIfSignal::GetPrnValue(double& CurChip, double CodeStep)
 	const int* DataPrn = PrnSequence->DataPrn;
 	const int* PilotPrn = PrnSequence->PilotPrn;
 	
+	// Handle Time Division Multiplexing (TDM) for L2C
+	if (IsTdm) {
+		// For L2C: transmit L2CM on even milliseconds, L2CL on odd milliseconds
+		int currentMs = (int)(CurChip / PrnSequence->Attribute->ChipRate) % 2;
+		
+		if (currentMs == 0) {
+			// Even millisecond - transmit L2CM (data channel)
+			DataChip = ChipCount % DataLength;
+			if (!DataPrn || DataChip < 0 || DataChip >= DataLength) {
+				PrnValue = complex_number(0, 0);
+			} else {
+				PrnValue = DataSignal * (DataPrn[DataChip] ? -1.0 : 1.0);
+			}
+		} else {
+			// Odd millisecond - transmit L2CL (pilot channel)
+			PilotChip = ChipCount % PilotLength;
+			if (!PilotPrn || PilotChip < 0 || PilotChip >= PilotLength) {
+				PrnValue = complex_number(0, 0);
+			} else {
+				PrnValue = PilotSignal * (PilotPrn[PilotChip] ? -1.0 : 1.0);
+			}
+		}
+		CurChip += CodeStep;
+		return PrnValue;
+	}
+	
+	// Normal processing for non-TDM signals
 	DataChip = ChipCount % DataLength;
 	if (IsBoc)
 		DataChip >>= 1;  // Faster division by 2
