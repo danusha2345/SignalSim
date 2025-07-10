@@ -10,6 +10,19 @@
 #include "ConstVal.h"
 #include "FNavBit.h"
 
+// Count number of set bits in a byte
+static int Count1(unsigned char n)
+{
+	int count = 0;
+	while (n > 0)
+	{
+		n &= (n - 1);
+		count++;
+	}
+	return (count & 1);
+}
+
+
 #define SQRT_A0 5440.588203494177338011974948823
 #define NORMINAL_I0 0.97738438111682456307726683035362
 
@@ -31,9 +44,11 @@ FNavBit::~FNavBit()
 
 int FNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits)
 {
-	int i, j, TOW, subframe, page, BitCount;
-	unsigned int EncodeData[7], GST, CrcResult, EncodeWord;	// 214bit to be encoded by CRC
-	unsigned char EncodeMessage[61], ConvEncodeBits;	// EncodeMessage contains 8x61 bits
+	int i, j, TOW, subframe, page;
+	unsigned int EncodeData[7], GST, CrcResult;
+	int UncodedBits[268];
+	int EncodedSymbols[536];
+	unsigned char ConvState;
 
 	Param;	// not used
 	// first determine the current TOW and subframe number
@@ -44,32 +59,31 @@ int FNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 	subframe = (TOW % 1200) / 50;	// two round of 600s frame (24 subframes) to hold 36 almanacs
 	page = (TOW % 50) / 10;
 	GetPageData(svid, page, subframe, GST, EncodeData);
-	CrcResult = Crc24qEncode(EncodeData, 214);
+	CrcResult = Crc24qEncode(EncodeData, 244);
 
-	// do convolution encode (EncodeData[0] bit22 through EncodeData[6] bit0)
-	ConvEncodeBits = 0;
-	EncodeWord = EncodeData[0] << 10;	// move to MSB
-	for (i = 0, BitCount = 10; i < 214 / 2; i ++)
+	// Place message bits and CRC into a single array (244 + 24 = 268 bits)
+	for (i = 0; i < 244; i++)
+		UncodedBits[i] = (EncodeData[i / 32] >> (31 - (i % 32))) & 1;
+	for (i = 0; i < 24; i++)
+		UncodedBits[244 + i] = (CrcResult >> (23 - i)) & 1;
+
+	// FEC (Forward Error Correction) Rate 1/2 Convolutional Encoder for F/NAV
+	// G1 = 1110101b (0x75), G2 = 1011011b (0x5B)
+	ConvState = 0;
+	for (i = 0; i < 268; i++)
 	{
-		EncodeMessage[i/2] = (EncodeMessage[i/2] << 4) + GalConvolutionEncode(ConvEncodeBits, EncodeWord);
-		BitCount += 2;
-		if ((BitCount % 32) == 0)
-			EncodeWord = EncodeData[BitCount >> 5];
+		ConvState = (ConvState << 1) | UncodedBits[i];
+		EncodedSymbols[i * 2] = Count1(ConvState & 0x75);
+		EncodedSymbols[i * 2 + 1] = Count1(ConvState & 0x5B);
 	}
-	EncodeWord = CrcResult << 8;
-	for (; i < 238 / 2; i ++)	// encode CRC
-		EncodeMessage[i/2] = (EncodeMessage[i/2] << 4) + GalConvolutionEncode(ConvEncodeBits, EncodeWord);
-	EncodeWord = 0;	// append 6 zeros as tail
-	EncodeMessage[59] = (EncodeMessage[59] << 4) + GalConvolutionEncode(ConvEncodeBits, EncodeWord);
-	EncodeMessage[60] = GalConvolutionEncode(ConvEncodeBits, EncodeWord);
-	EncodeMessage[60] = (EncodeMessage[60] << 4) + GalConvolutionEncode(ConvEncodeBits, EncodeWord);
 
-	// do interleaving and put into NavBits
-	for (i = 0; i < 12; i ++)
-		*(NavBits ++) = SyncPattern[i];
-	for (i = 0, ConvEncodeBits = 0x80; i < 8; i ++, ConvEncodeBits >>= 1)
-		for (j = 0; j < 61; j ++)
-			*(NavBits ++) = (EncodeMessage[j] & ConvEncodeBits) ? 1 : 0;
+	// Add 12-bit sync pattern
+	for (i = 0; i < 12; i++)
+		NavBits[i] = SyncPattern[i];
+
+	// Block interleaving (8 rows, 67 columns)
+	for (i = 0; i < 536; i++)
+		NavBits[i + 12] = EncodedSymbols[(i % 8) * 67 + (i / 8)];
 
 	return 0;
 }
@@ -277,7 +291,7 @@ int FNavBit::ComposeAlmWords(GPS_ALMANAC Almanac[], unsigned int AlmData[2][7], 
 	AlmData[0][4] |= COMPOSE_BITS(IntValue >> 1, 0, 12);
 	AlmData[0][5] = COMPOSE_BITS(IntValue, 31, 1);
 	AlmData[0][5] |= COMPOSE_BITS((Almanac[1].valid & 1) ? 0 : 1, 29, 2);
-	AlmData[0][5] = COMPOSE_BITS(Almanac[1].svid, 23, 6);	// SVID2 starts here
+	AlmData[0][5] |= COMPOSE_BITS(Almanac[1].svid, 23, 6);	// SVID2 starts here
 	IntValue = UnscaleInt(Almanac[1].sqrtA - SQRT_A0, -11);
 	AlmData[0][5] |= COMPOSE_BITS(IntValue, 10, 13);
 	UintValue = UnscaleUint(Almanac[1].ecc, -16);
@@ -375,10 +389,4 @@ void FNavBit::GetPageData(int svid, int page, int subframe, unsigned int GST, un
 	}
 }
 
-// encode 2MSB of EncodeWord, left shift EncodeWord and update ConvEncodeBits
-unsigned char FNavBit::GalConvolutionEncode(unsigned char &ConvEncodeBits, unsigned int &EncodeWord)
-{
-	ConvEncodeBits = (ConvEncodeBits << 2) + (unsigned char)(EncodeWord >> 30);
-	EncodeWord <<= 2;
-	return ((ConvolutionEncode(ConvEncodeBits) & 0xf) ^ 0x5);	// invert G2
-}
+
