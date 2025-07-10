@@ -9,6 +9,7 @@
 #endif
 
 #include "SignalSim.h"
+#include "L5CNavBit.h"
 #include "../inc/FastMath.h"
 
 // Constants for quantization and time conversion
@@ -23,7 +24,7 @@ const int WEEK_MS = 604800000;
 #define TOTAL_SAT_CHANNEL 128
 
 typedef enum {
-    DataBitLNav, DataBitCNav, DataBitCNav2, // for GPS
+    DataBitLNav, DataBitCNav, DataBitCNav2, DataBitL5CNav, // for GPS
     DataBitGNav, DataBitGNav2,	// for GLONASS
     DataBitD1D2, DataBitBCNav1, DataBitBCNav2, DataBitBCNav3,	// for BDS
     DataBitINav, DataBitFNav, DataBitECNav,	// for Galileo
@@ -149,6 +150,7 @@ int main(int argc, char* argv[])
 		case DataBitLNav:   NavBitArray[i] = new LNavBit; break;
 		case DataBitCNav:   NavBitArray[i] = new CNavBit; break;
 		case DataBitCNav2:  NavBitArray[i] = new CNav2Bit; break;
+		case DataBitL5CNav: NavBitArray[i] = new L5CNavBit; break;
 		case DataBitGNav:   NavBitArray[i] = new GNavBit; break;
 		case DataBitGNav2:  NavBitArray[i] = (NavBit*)0; break;
 		case DataBitD1D2:   NavBitArray[i] = new D1D2NavBit; break;
@@ -236,6 +238,7 @@ int main(int argc, char* argv[])
 		NavBitArray[DataBitLNav]->SetEphemeris(i, GpsEph[i - 1]);
 		NavBitArray[DataBitCNav]->SetEphemeris(i, GpsEph[i - 1]);
 		NavBitArray[DataBitCNav2]->SetEphemeris(i, GpsEph[i - 1]);
+		NavBitArray[DataBitL5CNav]->SetEphemeris(i, GpsEph[i - 1]);
 	}
 	for (i = 1; i <= TOTAL_BDS_SAT; i ++)
 	{
@@ -260,6 +263,7 @@ int main(int argc, char* argv[])
 	NavBitArray[DataBitLNav]->SetAlmanac(NavData.GetGpsAlmanac());
 	NavBitArray[DataBitCNav]->SetAlmanac(NavData.GetGpsAlmanac());
 	NavBitArray[DataBitCNav2]->SetAlmanac(NavData.GetGpsAlmanac());
+	NavBitArray[DataBitL5CNav]->SetAlmanac(NavData.GetGpsAlmanac());
 	NavBitArray[DataBitD1D2]->SetAlmanac(NavData.GetBdsAlmanac());
 	NavBitArray[DataBitBCNav1]->SetAlmanac(NavData.GetBdsAlmanac());
 	NavBitArray[DataBitBCNav2]->SetAlmanac(NavData.GetBdsAlmanac());
@@ -757,7 +761,7 @@ NavBit* GetNavData(GnssSystem SatSystem, int SatSignalIndex, NavBit* NavBitArray
 		case SIGNAL_INDEX_L1C:  return NavBitArray[DataBitCNav2];
 		case SIGNAL_INDEX_L2C:  return NavBitArray[DataBitCNav];
 		case SIGNAL_INDEX_L2P:  return NavBitArray[DataBitLNav];
-		case SIGNAL_INDEX_L5:   return NavBitArray[DataBitCNav];
+		case SIGNAL_INDEX_L5:   return NavBitArray[DataBitL5CNav];
 		default: return NavBitArray[DataBitLNav];
 		}
 		break;

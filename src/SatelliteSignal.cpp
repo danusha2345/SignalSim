@@ -21,6 +21,7 @@
 #include "BCNav2Bit.h"
 #include "BCNav3Bit.h"
 #include "GNavBit.h"
+#include "L5CNavBit.h"
 #include "PilotBit.h"
 
 const SignalAttribute CSatelliteSignal::SignalAttributes[32] = {
@@ -78,7 +79,7 @@ BOOL CSatelliteSignal::SetSignalAttribute(GnssSystem System, int SignalIndex, Na
 			return NavData ? ((typeid(*NavData) == typeid(CNavBit)) ? TRUE : FALSE) : TRUE;
 		case SIGNAL_INDEX_L5:
 			Attribute = &SignalAttributes[3];
-			return NavData ? ((typeid(*NavData) == typeid(CNavBit)) ? TRUE : FALSE) : TRUE;
+			return NavData ? ((typeid(*NavData) == typeid(L5CNavBit)) ? TRUE : FALSE) : TRUE;
 		case SIGNAL_INDEX_L2P:
 			Attribute = &SignalAttributes[0];  // L2P uses same navigation message format as L1CA (LNAV)
 			return NavData ? ((typeid(*NavData) == typeid(LNavBit)) ? TRUE : FALSE) : TRUE;

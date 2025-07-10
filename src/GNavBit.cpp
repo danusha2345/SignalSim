@@ -69,14 +69,9 @@ int GNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 	bit = 0;	// first bit of the string is always 0
 	for (i = 86; i < 170; i++)
 		bit = NavBits[i] = (bit ^ NavBits[i]);
-	// expand to meander code
+	// copy the 85 bits of navigation data to the first 85 bits
 	for (i = 0; i < 85; i++)
-	{
-		NavBits[i * 2] = NavBits[i + 85];
-		NavBits[i * 2 + 1] = 1 - NavBits[i + 85];
-	}
-	// append time mark
-	AssignBits(0x3e375096, 30, NavBits + 170);
+		NavBits[i] = NavBits[i + 85];
 
 	return 0;
 }

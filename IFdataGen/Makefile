@@ -33,6 +33,7 @@ SOURCES = $(TARGET).cpp \
           $(SRCDIR)/INavBit.cpp \
           $(SRCDIR)/JsonInterpreter.cpp \
           $(SRCDIR)/JsonParser.cpp \
+          $(SRCDIR)/L5CNavBit.cpp \
           $(SRCDIR)/LNavBit.cpp \
           $(SRCDIR)/NavBit.cpp \
           $(SRCDIR)/NavData.cpp \
