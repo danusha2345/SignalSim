@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <cmath>
 
 #include "ConstVal.h"
 #include "JsonInterpreter.h"
@@ -345,9 +346,9 @@ BOOL SetOutputParam(JsonObject *Object, OUTPUT_PARAM &OutputParam)
 			}
 			break;
 		case 12:	// "sampleFreq"
-			OutputParam.SampleFreq = (int)(GET_DOUBLE_VALUE(Object) * 1000); break;
+			OutputParam.SampleFreq = (int)round(GET_DOUBLE_VALUE(Object) * 1000); break;
 		case 13:	// "centerFreq"
-			OutputParam.CenterFreq = (int)(GET_DOUBLE_VALUE(Object) * 1000); break;
+			OutputParam.CenterFreq = (int)round(GET_DOUBLE_VALUE(Object) * 1000); break;
 		}
 		Object = JsonStream::GetNextObject(Object);
 	}
