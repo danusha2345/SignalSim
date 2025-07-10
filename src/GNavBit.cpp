@@ -62,16 +62,26 @@ int GNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 
 	// add check sum and put 85 bits to NavBits position 85~169 (leave first 85 places for meander code expansion)
 	Stream[2] |= CheckSum(Stream);
-	AssignBits(Stream[0], 21, NavBits + 85);
-	AssignBits(Stream[1], 32, NavBits + 106);
-	AssignBits(Stream[2], 32, NavBits + 138);
-	// do relative coding
+
+	// Per GLONASS ICD, each 2-second string (100 bits) begins with a 30-bit time mark.
+	// The time mark is 000110111000010110010011101000b = 0x1B8593A0
+	AssignBits(0x1B8593A0, 30, NavBits);
+
+	// The remaining 70 bits are the navigation data.
+	// We take the first 70 bits from the generated 85-bit data word.
+	int data_bits[85];
+	AssignBits(Stream[0], 21, data_bits);
+	AssignBits(Stream[1], 32, data_bits + 21);
+	AssignBits(Stream[2], 32, data_bits + 53);
+
+	// do relative coding on the 85 bits first
 	bit = 0;	// first bit of the string is always 0
-	for (i = 86; i < 170; i++)
-		bit = NavBits[i] = (bit ^ NavBits[i]);
-	// copy the 85 bits of navigation data to the first 85 bits
 	for (i = 0; i < 85; i++)
-		NavBits[i] = NavBits[i + 85];
+		bit = data_bits[i] = (bit ^ data_bits[i]);
+
+	// copy the first 70 bits of the relatively-coded data to the output string
+	for (i = 0; i < 70; i++)
+		NavBits[i + 30] = data_bits[i];
 
 	return 0;
 }
