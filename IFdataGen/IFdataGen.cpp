@@ -443,6 +443,11 @@ int main(int argc, char* argv[])
 		{
 			if (TotalChannelNumber >= TOTAL_SAT_CHANNEL)
 				break;
+			// Проверяем, что svid в допустимых пределах для Galileo
+			if (GalEphVisible[i]->svid < 1 || GalEphVisible[i]->svid > TOTAL_GAL_SAT) {
+				printf("[ERROR] Galileo svid %d out of range [1-%d]\n", GalEphVisible[i]->svid, TOTAL_GAL_SAT);
+				continue;
+			}
 			SatIfSignal[TotalChannelNumber] = new CSatIfSignal(OutputParam.SampleFreq, IfFreq, GalileoSystem, SignalIndex, GalEphVisible[i]->svid);
 			SatIfSignal[TotalChannelNumber]->InitState(CurTime, &GalSatParam[GalEphVisible[i]->svid - 1], GetNavData(GalileoSystem, SignalIndex, NavBitArray));
 			TotalChannelNumber++;
@@ -703,6 +708,11 @@ void UpdateSatParamList(GNSS_TIME CurTime, KINEMATIC_INFO CurPos, int ListCount,
 	}
 	for (i = 0; i < GalSatNumber; i ++)
 	{
+		// Проверяем, что svid в допустимых пределах для Galileo
+		if (GalEphVisible[i]->svid < 1 || GalEphVisible[i]->svid > TOTAL_GAL_SAT) {
+			printf("[ERROR] Galileo svid %d out of range [1-%d]\n", GalEphVisible[i]->svid, TOTAL_GAL_SAT);
+			continue;
+		}
 		index = GalEphVisible[i]->svid - 1;
 		GetSatelliteParam(CurPos, PosLLA, CurTime, GalileoSystem, GalEphVisible[i], IonoParam, &GalSatParam[index]);
 		GetSatelliteCN0(ListCount, PowerList, PowerControl.InitCN0, PowerControl.Adjust, &GalSatParam[index]);

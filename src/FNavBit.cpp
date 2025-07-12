@@ -46,8 +46,8 @@ int FNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 {
 	int i, j, TOW, subframe, page;
 	unsigned int EncodeData[7], GST, CrcResult;
-	int UncodedBits[268];
-	int EncodedSymbols[536];
+	int UncodedBits[272];  // 248 message bits + 24 CRC bits
+	int EncodedSymbols[544];  // 272 * 2 = 544 after convolutional encoding
 	unsigned char ConvState;
 
 	Param;	// not used

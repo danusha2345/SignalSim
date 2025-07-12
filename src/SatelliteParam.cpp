@@ -80,7 +80,7 @@ int GetGlonassVisibleSatellite(KINEMATIC_INFO Position, GLONASS_TIME time, OUTPU
 	{
 		if (Eph[i] == NULL || Eph[i]->flag == 0)
 			continue;
-		if (OutputParam.GlonassMaskOut & (1 << (i-1)))
+		if (OutputParam.GlonassMaskOut & (1 << i))
 			continue;
 		if (!GlonassSatPosSpeedEph(time.MilliSeconds / 1000., Eph[i], &SatPosition, NULL))
 			continue;
