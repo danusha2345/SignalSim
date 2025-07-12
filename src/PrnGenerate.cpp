@@ -160,6 +160,7 @@ const PrnAttribute PrnGenerate::PrnAttributes[] = {
 	{  5115,       1,         1,                 0 },	// index  9 for E6
 	{   511,       1,         1,                 0 },	// index 10 for G1/G2
 	{  2046,      10,        10, PRN_ATTRIBUTE_BOC | PRN_ATTRIBUTE_QMBOC },	// index 11 for B1C (BOC(1,1) + QMBOC for pilot)
+	{ 10230,       1,         1, PRN_ATTRIBUTE_BOC },	// index 12 for G3/L3OC (BPSK(10))
 };
 
 LsfrSequence::LsfrSequence(unsigned int InitState, unsigned int Polynomial, int Length) : mInitState(InitState), mPolynomial(Polynomial), mOutputMask(1<<(Length-1))
@@ -309,6 +310,14 @@ PrnGenerate::PrnGenerate(GnssSystem System, int SignalIndex, int Svid)
 			DataPrn  = GetGoldCode(0x1fc, 0x110, 0x0, 0x0, 511, 9, 511);
 			PilotPrn = NULL;
 			Attribute = &PrnAttributes[10];
+			break;
+		case SIGNAL_INDEX_G3:
+			// G3/L3OC uses Gold code with length 10230
+			// For data component (L3OC-I)
+			DataPrn  = GetGoldCode(0x3ff, 0x224, 0x3ff, 0x387, 10230, 10, 10230);
+			// For pilot component (L3OC-Q)
+			PilotPrn = GetGoldCode(0x3ff, 0x224, 0x3ff, 0x387, 10230, 10, 10230);
+			Attribute = &PrnAttributes[12];
 			break;
 		default:	// unknown SignalIndex
 			DataPrn = NULL; PilotPrn = NULL;

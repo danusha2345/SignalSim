@@ -40,6 +40,7 @@ const SignalAttribute CSatelliteSignal::SignalAttributes[32] = {
 {        1,        4,     0x7,      2000,   },	// index 11 for I/NAV E5b
 {        1,        1,     0x0,      1000,   },	// index 12 for CNAV E6
 {        1,       10,     0x0,      2000,   },	// index 13 for GNAV
+{        1,      250,     0x0,     10000,   },	// index 14 for G3/L3OC (250 secondary code)
 };
 
 CSatelliteSignal::CSatelliteSignal()
@@ -128,6 +129,9 @@ BOOL CSatelliteSignal::SetSignalAttribute(GnssSystem System, int SignalIndex, Na
 		case SIGNAL_INDEX_G1:
 		case SIGNAL_INDEX_G2:
 			Attribute = &SignalAttributes[13];
+			return NavData ? ((typeid(*NavData) == typeid(GNavBit)) ? TRUE : FALSE) : TRUE;
+		case SIGNAL_INDEX_G3:
+			Attribute = &SignalAttributes[14];  // New index for G3
 			return NavData ? ((typeid(*NavData) == typeid(GNavBit)) ? TRUE : FALSE) : TRUE;
 		default: return FALSE;	// unknown FreqIndex
 		}
@@ -275,6 +279,11 @@ BOOL CSatelliteSignal::GetSatelliteSignal(GNSS_TIME TransmitTime, complex_number
 		case SIGNAL_INDEX_G2 :
 			DataSignal = complex_number((double)DataBit, 0);
 			PilotSignal = complex_number(0, 0);
+			break;
+		case SIGNAL_INDEX_G3:
+			// G3/L3OC has both data (L3OC-I) and pilot (L3OC-Q) components
+			DataSignal = complex_number(DataBit * AMPLITUDE_1_2, 0);    // L3OC-I data on real part
+			PilotSignal = complex_number(0, PilotBit * AMPLITUDE_1_2);  // L3OC-Q pilot on imaginary part
 			break;
 		}
 		break;

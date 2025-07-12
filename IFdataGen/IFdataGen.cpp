@@ -215,6 +215,8 @@ int main(int argc, char* argv[])
 			OutputParam.FreqSelect[GlonassSystem] &= ~(1 << SIGNAL_INDEX_G1);
 		if ((OutputParam.FreqSelect[GlonassSystem] & (1 << SIGNAL_INDEX_G2)) && (FREQ_GLO_G2 < FreqLow || FREQ_GLO_G2 > FreqHigh))
 			OutputParam.FreqSelect[GlonassSystem] &= ~(1 << SIGNAL_INDEX_G2);
+		if ((OutputParam.FreqSelect[GlonassSystem] & (1 << SIGNAL_INDEX_G3)) && (FREQ_GLO_G3 < FreqLow || FREQ_GLO_G3 > FreqHigh))
+			OutputParam.FreqSelect[GlonassSystem] &= ~(1 << SIGNAL_INDEX_G3);
 	}
 	
 

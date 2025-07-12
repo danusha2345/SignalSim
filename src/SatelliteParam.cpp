@@ -275,6 +275,14 @@ double GetIonoDelay(double IonoDelayL1, int system, int SignalIndex)
 		case SIGNAL_INDEX_E6 : return IonoDelayL1 * 1.517824; // (154/125)^2
 		default: return IonoDelayL1;
 		}
+	case GlonassSystem:
+		switch (SignalIndex)
+		{
+		case SIGNAL_INDEX_G1: return IonoDelayL1 * 1.040594059405941; // (1575.42/1602)^2 for k=-7
+		case SIGNAL_INDEX_G2: return IonoDelayL1 * 1.5980663241899555; // (1575.42/1246)^2 for k=-7
+		case SIGNAL_INDEX_G3: return IonoDelayL1 * 1.7205547652916243; // (1575.42/1202.025)^2
+		default: return IonoDelayL1;
+		}
 	default: return IonoDelayL1;
 	}
 }
@@ -317,7 +325,21 @@ double GetWaveLength(int system, int SignalIndex, int FreqID)
 		default: return LIGHT_SPEED / FREQ_GAL_E1;
 		}
 	case GlonassSystem:
-		Freq = (SignalIndex == SIGNAL_INDEX_G1) ? (1602e6 + 562500 * FreqID) : (1246e6 + 437500 * FreqID);
+		switch (SignalIndex)
+		{
+		case SIGNAL_INDEX_G1:
+			Freq = 1602e6 + 562500 * FreqID;
+			break;
+		case SIGNAL_INDEX_G2:
+			Freq = 1246e6 + 437500 * FreqID;
+			break;
+		case SIGNAL_INDEX_G3:
+			Freq = FREQ_GLO_G3;  // G3 uses CDMA, not FDMA
+			break;
+		default:
+			Freq = 1602e6 + 562500 * FreqID;
+			break;
+		}
 		return LIGHT_SPEED / Freq;
 	default: return LIGHT_SPEED / FREQ_GPS_L1;
 	}

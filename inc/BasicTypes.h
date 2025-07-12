@@ -43,6 +43,7 @@ typedef enum { GpsSystem, BdsSystem, GalileoSystem, GlonassSystem, SbasSystem, Q
 
 #define SIGNAL_INDEX_G1				0
 #define SIGNAL_INDEX_G2				1
+#define SIGNAL_INDEX_G3				2
 
 typedef struct
 {
