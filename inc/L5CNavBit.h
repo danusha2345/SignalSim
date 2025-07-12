@@ -39,7 +39,7 @@ private:
 
 	int ComposeEphWords(PGPS_EPHEMERIS Ephemeris, unsigned int EphData[2][9], unsigned int ClockData[4], unsigned int DelayData[3]);
 	int ComposeAlmWords(GPS_ALMANAC Almanac[], unsigned int &ReducedAlmData, unsigned int MidiAlmData[6]);
-	void GetMessageData(int svid, int message, int TOW, unsigned int Data[9]);
+	void GetMessagePayload(int svid, int message_type, unsigned int Data[8]);
 };
 
 #endif // __L5_CNAV_BIT_H__

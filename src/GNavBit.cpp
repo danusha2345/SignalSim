@@ -258,11 +258,41 @@ int GNavBit::ComposeStringAlm(PGLONASS_ALMANAC Almanac, int slot, unsigned int S
 	return 0;
 }
 
+// Calculate Hamming code for GLONASS string (85 data bits)
+// The checksum is calculated over 85 data bits. The result is 8 parity bits.
+// The bit numbering is from MSB (1) to LSB (85).
 unsigned int GNavBit::CheckSum(unsigned int Data[3])
 {
-    // This is a placeholder for a proper Hamming code implementation
-    // The previous table-based checksum was non-standard.
-    // A full implementation of Hamming(93,85) is complex.
-    // Returning 0 for now to allow compilation.
-    return 0;
+    int i;
+    int data_bits[85];
+    unsigned char parity[8] = {0};
+    unsigned int checksum = 0;
+
+    // Extract 85 data bits into a simple array
+    AssignBits(Data[0], 21, data_bits);
+    AssignBits(Data[1], 32, data_bits + 21);
+    AssignBits(Data[2], 32, data_bits + 53);
+
+    // Calculate parity bits p1-p7 based on ICD
+    for (i = 0; i < 85; i++)
+    {
+        if (((i+1) % 2) != 0) parity[0] ^= data_bits[i]; // p1
+        if ((((i+1)/2) % 2) != 0) parity[1] ^= data_bits[i]; // p2
+        if ((((i+1)/4) % 2) != 0) parity[2] ^= data_bits[i]; // p3
+        if ((((i+1)/8) % 2) != 0) parity[3] ^= data_bits[i]; // p4
+        if ((((i+1)/16) % 2) != 0) parity[4] ^= data_bits[i]; // p5
+        if ((((i+1)/32) % 2) != 0) parity[5] ^= data_bits[i]; // p6
+        if ((((i+1)/64) % 2) != 0) parity[6] ^= data_bits[i]; // p7
+    }
+
+    // p8 is the overall parity of data bits + p1-p7
+    parity[7] = parity[0]^parity[1]^parity[2]^parity[3]^parity[4]^parity[5]^parity[6];
+    for (i = 0; i < 85; i++)
+        parity[7] ^= data_bits[i];
+
+    // Assemble the 8-bit checksum
+    for (i = 0; i < 8; i++)
+        checksum |= (parity[i] << (7-i));
+
+    return checksum;
 }
