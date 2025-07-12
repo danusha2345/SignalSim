@@ -59,18 +59,18 @@ int FNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 	subframe = (TOW % 1200) / 50;	// two round of 600s frame (24 subframes) to hold 36 almanacs
 	page = (TOW % 50) / 10;
 	GetPageData(svid, page, subframe, GST, EncodeData);
-	CrcResult = Crc24qEncode(EncodeData, 244);
+	CrcResult = Crc24qEncode(EncodeData, 248);
 
-	// Place message bits and CRC into a single array (244 + 24 = 268 bits)
-	for (i = 0; i < 244; i++)
+	// Place message bits and CRC into a single array (248 + 24 = 272 bits)
+	for (i = 0; i < 248; i++)
 		UncodedBits[i] = (EncodeData[i / 32] >> (31 - (i % 32))) & 1;
 	for (i = 0; i < 24; i++)
-		UncodedBits[244 + i] = (CrcResult >> (23 - i)) & 1;
+		UncodedBits[248 + i] = (CrcResult >> (23 - i)) & 1;
 
 	// FEC (Forward Error Correction) Rate 1/2 Convolutional Encoder for F/NAV
 	// G1 = 1110101b (0x75), G2 = 1011011b (0x5B)
 	ConvState = 0;
-	for (i = 0; i < 268; i++)
+	for (i = 0; i < 272; i++)
 	{
 		ConvState = (ConvState << 1) | UncodedBits[i];
 		EncodedSymbols[i * 2] = Count1(ConvState & 0x75);
@@ -81,9 +81,9 @@ int FNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 	for (i = 0; i < 12; i++)
 		NavBits[i] = SyncPattern[i];
 
-	// Block interleaving (8 rows, 67 columns)
-	for (i = 0; i < 536; i++)
-		NavBits[i + 12] = EncodedSymbols[(i % 8) * 67 + (i / 8)];
+	// Block interleaving (8 rows, 68 columns)
+	for (i = 0; i < 544; i++)
+		NavBits[i + 12] = EncodedSymbols[(i % 8) * 68 + (i / 8)];
 
 	return 0;
 }

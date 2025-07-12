@@ -172,6 +172,54 @@ Content depends on page number in HOW:
 **SUBFRAME 5 - Almanac for Satellites 1-24**
 Similar almanac page structure for satellites 1-24.
 
+### GPS L1C (CNAV-2) - Detailed Structure ##############################################################
+
+#### General Parameters:
+- **Data Rate**: 100 bits/sec
+- **Code Length**: 10230 chips (10 ms period)
+- **Modulation**: TMBOC (Time-Multiplexed Binary Offset Carrier)
+- **Components**: L1C_D (Data, 25% power) + L1C_P (Pilot, 75% power)
+- **FEC**: LDPC + BCH
+
+#### CNAV-2 Frame Structure:
+- **Frame Length**: 1800 bits
+- **Transmission Time**: 18 seconds
+
+Each frame consists of three subframes:
+
+---
+#### **Subframe 1: Time of Interval (TOI)**
+- **Length**: 52 bits
+- **Content**: Contains the Time of Interval (TOI) which indicates the start time of the next subframe (Subframe 2).
+- **FEC**: Encoded with a BCH(51, 11) code.
+
+---
+#### **Subframe 2: Ephemeris and Clock**
+- **Length**: 600 bits (before FEC)
+- **Key Feature**: This subframe is transmitted in **every 18-second frame** and contains the **complete set of ephemeris and clock parameters**. This allows a receiver to calculate a position much faster than with legacy signals.
+- **Content**:
+  - **Time**: WN, `t_oe`, `t_oc`.
+  - **Orbit Parameters**: M₀, e, √A, Ω₀, i₀, ω.
+  - **Corrections**: Δn, Ω̇, i̇, and all 6 harmonic corrections (Cuc, Cus, Crc, Crs, Cic, Cis).
+  - **Clock Parameters**: a_f0, a_f1, a_f2.
+  - **Delays**: T_GD, ISC_L1CP, ISC_L1CD.
+  - **Status**: URA, satellite health.
+- **FEC**: A 24-bit CRC is added to the 576 data bits, and the resulting 600 bits are encoded with an **LDPC (1200, 600)** code.
+
+---
+#### **Subframe 3: Variable Data**
+- **Length**: 274 bits (before FEC)
+- **Content**: This subframe transmits system information in a "page" format, with the page type changing from frame to frame.
+- **Page Types**:
+  - **Page 0**: Ionospheric model and UTC parameters.
+  - **Pages 1-6**: MIDI almanac (reduced almanac for 6 satellites).
+  - **Page 7**: Reduced-precision almanac.
+  - **Page 9**: GPS/GNSS Time Offset (GGTO).
+  - **Page 10**: Earth Orientation Parameters (EOP).
+  - **Other**: Text messages, differential corrections, etc.
+- **FEC**: A 24-bit CRC is added to the 250 data bits, and the resulting 274 bits are encoded with an **LDPC (548, 274)** code.
+
+---
 
 ### GPS L2C - Detailed Structure ##############################################################
 

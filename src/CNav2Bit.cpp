@@ -1148,19 +1148,6 @@ void CNav2Bit::ComposeSubframe2(PGPS_EPHEMERIS Eph, unsigned int Subframe2[18])
 	// Clear all words first
 	memset(Subframe2, 0, 18 * sizeof(unsigned int));
 	
-#ifdef DEBUG_L1C
-	printf("\n=== L1C ComposeSubframe2 Debug for PRN %d ===\n", Eph->svid);
-	printf("Input ephemeris data:\n");
-	printf("  valid: 0x%02X, source: %d\n", Eph->valid, Eph->source);
-	printf("  week: %d, toe: %d, top: %d\n", Eph->week, Eph->toe, Eph->top);
-	printf("  health: 0x%04X, ura: %d\n", Eph->health, Eph->ura);
-	printf("  axis: %.3f m, axis_dot: %.6e m/s\n", Eph->axis, Eph->axis_dot);
-	printf("  M0: %.6f rad, ecc: %.9f\n", Eph->M0, Eph->ecc);
-	printf("  omega0: %.6f rad, i0: %.6f rad, w: %.6f rad\n", Eph->omega0, Eph->i0, Eph->w);
-	printf("  af0: %.6e s, af1: %.6e s/s, af2: %.6e s/s²\n", Eph->af0, Eph->af1, Eph->af2);
-	printf("  tgd: %.6e s\n", Eph->tgd);
-#endif
-	
 	// PRN number (6 bits) at bits 0-5 (MSB first)
 	Subframe2[0] = COMPOSE_BITS(Eph->svid, 26, 6);
 	// top (11 bits) at bits 6-16
@@ -1246,33 +1233,13 @@ void CNav2Bit::ComposeSubframe2(PGPS_EPHEMERIS Eph, unsigned int Subframe2[18])
 	Subframe2[16] |= COMPOSE_BITS(IntValue, 18, 10);
 	IntValue = UnscaleInt(Eph->tgd, -35);	// TGD
 	Subframe2[16] |= COMPOSE_BITS(IntValue, 5, 13);
-	IntValue = UnscaleInt(Eph->tgd - Eph->tgd_ext[1], -35);	// ISC_L1CP
+	IntValue = UnscaleInt(Eph->tgd_ext[1], -35);	// ISC_L1CP, was tgd - tgd_ext[1]
 	Subframe2[16] |= COMPOSE_BITS(IntValue >> 8, 0, 5);
 	Subframe2[17] = COMPOSE_BITS(IntValue, 24, 8);
-	IntValue = UnscaleInt(Eph->tgd - Eph->tgd_ext[0], -35);	// ISC_L1CD
+	IntValue = UnscaleInt(Eph->tgd_ext[0], -35);	// ISC_L1CD, was tgd - tgd_ext[0]
 	Subframe2[17] |= COMPOSE_BITS(IntValue, 11, 13);
 	Subframe2[17] |= COMPOSE_BITS(Eph->week & 0xFF, 2, 8);	// Wn_op (8 bits)
 	// Reserved bits (18 bits) at bits 558-575 are already 0 from memset
-	
-#ifdef DEBUG_L1C
-	printf("\nSubframe 2 raw data (18 DWORDs):\n");
-	for (int i = 0; i < 18; i++) {
-		printf("  Word %2d: 0x%08X\n", i, Subframe2[i]);
-	}
-	
-	// Verify critical fields
-	printf("\nVerifying critical fields:\n");
-	printf("  PRN (should be %d): %d\n", Eph->svid, (Subframe2[0] >> 26) & 0x3F);
-	printf("  t_op: %d (= %d seconds)\n", (Subframe2[0] >> 15) & 0x7FF, ((Subframe2[0] >> 15) & 0x7FF) * 300);
-	printf("  Health bit: %d\n", (Subframe2[0] >> 14) & 1);
-	printf("  URA_ED: %d\n", (Subframe2[0] >> 9) & 0x1F);
-	
-	// Check URA_NED field (bits 444-454)
-	int ura_ned_word = 444 / 32;  // Word 13
-	int ura_ned_bit = 444 % 32;   // Bit 28
-	printf("  URA_NED location: word %d, starting at bit %d\n", ura_ned_word, ura_ned_bit);
-	printf("  URA_NED value: %d\n", (Subframe2[14] >> 10) & 0x7FF);
-#endif
 }
 
 void CNav2Bit::LDPCEncode(unsigned int Stream[], int bits[], int SymbolLength, int TableSize, const unsigned int MatrixGen[])
