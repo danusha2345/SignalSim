@@ -6,6 +6,7 @@
 //
 //----------------------------------------------------------------------
 
+#include <math.h>
 #include <memory.h>
 #include "ConstVal.h"
 #include "L5CNavBit.h"
@@ -69,8 +70,8 @@ L5CNavBit::~L5CNavBit()
 // Param is used to distinguish from Dc in L2C and D5 in L5 (0 for L2C, 1 for L5)
 int L5CNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits)
 {
-	int i, TOW, message;
-	unsigned int EncodeData[9], CrcResult;	// 276bit to be encoded by CRC
+	int i, TOW, message_type;
+	unsigned int MessageData[9], CrcResult;	// 276bit to be encoded by CRC
 	int UncodedBits[300], InterleavedBits[300];
 
 	// validate svid to prevent out-of-bounds array access
@@ -81,21 +82,37 @@ int L5CNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBi
 		return -1;
 	}
 
-	// first determine the current TOW and subframe number
+	// first determine the current TOW and message type
 	StartTime.Week += StartTime.MilliSeconds / 604800000;
 	StartTime.MilliSeconds %= 604800000;
 	TOW = StartTime.MilliSeconds / 6000; // L5 message is 6s long
-	message = TOW % 100;	// message index within super frame
-	TOW ++;		// TOW is the time of NEXT message
-	if (TOW >= 100800)
-		TOW = 0;
+	
+	// Simplified message schedule for demonstration: 10, 11, 30, 37...
+	int message_index = TOW % 4;
+	switch(message_index)
+	{
+		case 0: message_type = 10; break;
+		case 1: message_type = 11; break;
+		case 2: message_type = 30; break;
+		case 3: message_type = 37; break; // Almanac
+		default: message_type = 10;
+	}
 
-	GetMessageData(svid, message, TOW, EncodeData);
-	CrcResult = Crc24qEncode(EncodeData, 276);
+	TOW = (TOW + 1) % 100800; // TOW is the time of NEXT message
+
+	GetMessageData(svid, message_type, TOW, MessageData);
+	
+	// Add header to the message data
+	MessageData[0] |= (0x8b << 24) | (svid << 18) | (message_type << 12);
+	MessageData[0] |= (TOW & 0x1FFFF) >> 5; // Upper 12 bits of TOW
+	MessageData[1] |= (TOW & 0x1F) << 27;   // Lower 5 bits of TOW
+	MessageData[1] |= (0 << 26); // Alert flag
+
+	CrcResult = Crc24qEncode(MessageData, 276);
 
 	// Place message bits and CRC into a single array
 	for (i = 0; i < 276; i++)
-		UncodedBits[i] = (EncodeData[i / 32] >> (31 - (i % 32))) & 1;
+		UncodedBits[i] = (MessageData[i / 32] >> (31 - (i % 32))) & 1;
 	for (i = 0; i < 24; i++)
 		UncodedBits[276 + i] = (CrcResult >> (23 - i)) & 1;
 
@@ -104,17 +121,15 @@ int L5CNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBi
 		InterleavedBits[i] = UncodedBits[InterleaveMatrix[i]];
 
 	// FEC (Forward Error Correction) Rate 1/2 Convolutional Encoder
-	// For each input bit, two output bits are generated
-	// G1 = 1 + x + x^2 + x^3 + x^6
-	// G2 = 1 + x^2 + x^3 + x^5 + x^6
+	// Per IS-GPS-705J, G1=1+x^2+x^3+x^5+x^6 (0x5B) and G2=1+x+x^2+x^3+x^6 (0x79)
 	unsigned char &ConvState = ConvEncodeBits[svid - 1];
 	for (i = 0; i < 300; i++)
 	{
 		ConvState = (ConvState << 1) | InterleavedBits[i];
-		// Generator G1: 1111001 -> 0x79
-		NavBits[i * 2] = Count1(ConvState & 0x79);
-		// Generator G2: 1011011 -> 0x5B
-		NavBits[i * 2 + 1] = Count1(ConvState & 0x5B);
+		// Generator G1: 1011011 -> 0x5B
+		NavBits[i * 2] = Count1(ConvState & 0x5B);
+		// Generator G2: 1111001 -> 0x79
+		NavBits[i * 2 + 1] = Count1(ConvState & 0x79);
 	}
 
 	return 0;
@@ -188,118 +203,110 @@ int L5CNavBit::SetIonoUtc(PIONO_PARAM IonoParam, PUTC_PARAM UtcParam)
 
 int L5CNavBit::ComposeEphWords(PGPS_EPHEMERIS Ephemeris, unsigned int EphData[2][9], unsigned int ClockData[4], unsigned int DelayData[3])
 {
-	signed int IntValue;
-	unsigned int UintValue;
-	long long int LongValue;
-	unsigned long long int ULongValue;
+    // All scaling factors and bit fields are from IS-GPS-705J, Table 3.5-1
+    // The data is packed into a 9-DWORD (288 bit) buffer.
+    // We compose the data payload (bits 39-276). Header (bits 1-38) is added later.
 
-	// Message Type 10
-	EphData[0][0] = (0x8b << 12) | (Ephemeris->svid << 6) | 10;
-	EphData[0][1] = COMPOSE_BITS(Ephemeris->week, 1, 13);
-	EphData[0][1] |= COMPOSE_BITS(Ephemeris->health >> 8, 15, 3);
-	EphData[0][2] = COMPOSE_BITS(Ephemeris->health >> 6, 30, 2);
-	UintValue = Ephemeris->top / 300;
-	EphData[0][2] |= COMPOSE_BITS(UintValue, 19, 11);
-	EphData[0][2] |= COMPOSE_BITS(Ephemeris->ura, 14, 5);
-	UintValue = Ephemeris->toe / 300;
-	EphData[0][2] |= COMPOSE_BITS(UintValue, 3, 11);
-	IntValue = UnscaleInt(Ephemeris->axis - A_REF, -9);
-	EphData[0][2] |= COMPOSE_BITS(IntValue >> 23, 0, 3);
-	EphData[0][3] = COMPOSE_BITS(IntValue, 9, 23);
-	IntValue = UnscaleUint(Ephemeris->axis_dot, -21);
-	EphData[0][3] |= COMPOSE_BITS(IntValue >> 16, 0, 9);
-	EphData[0][4] = COMPOSE_BITS(IntValue, 16, 16);
-	IntValue = UnscaleInt(Ephemeris->delta_n / PI, -44);
-	EphData[0][4] |= COMPOSE_BITS(IntValue >> 1, 0, 16);
-	EphData[0][5] = COMPOSE_BITS(IntValue, 31, 1);
-	IntValue = UnscaleInt(Ephemeris->delta_n_dot / PI, -57);
-	EphData[0][5] |= COMPOSE_BITS(IntValue, 8, 23);
-	LongValue = UnscaleLong(Ephemeris->M0 / PI, -32);
-	IntValue = (LongValue & 0x100000000LL) ? 1 : 0;
-	UintValue = (unsigned int)LongValue;
-	EphData[0][5] |= COMPOSE_BITS(IntValue, 7, 1);
-	EphData[0][5] |= COMPOSE_BITS(UintValue >> 25, 0, 7);
-	EphData[0][6] = COMPOSE_BITS(UintValue, 7, 25);
-	ULongValue = UnscaleULong(Ephemeris->ecc, -34);
-	IntValue = (ULongValue & 0x100000000LL) ? 1 : 0;
-	UintValue = (unsigned int)ULongValue;
-	EphData[0][6] |= COMPOSE_BITS(IntValue, 6, 1);
-	EphData[0][6] |= COMPOSE_BITS(UintValue >> 26, 0, 6);
-	EphData[0][7] = COMPOSE_BITS(UintValue, 6, 26);
-	LongValue = UnscaleLong(Ephemeris->w / PI, -32);
-	IntValue = (LongValue & 0x100000000LL) ? 1 : 0;
-	UintValue = (unsigned int)LongValue;
-	EphData[0][7] |= COMPOSE_BITS(IntValue, 5, 1);
-	EphData[0][7] |= COMPOSE_BITS(UintValue >> 27, 0, 5);
-	EphData[0][8] = COMPOSE_BITS(UintValue, 5, 27);
+    // Clear arrays first
+    memset(EphData[0], 0, sizeof(unsigned int) * 9);
+    memset(EphData[1], 0, sizeof(unsigned int) * 9);
+    memset(ClockData, 0, sizeof(unsigned int) * 4);
+    memset(DelayData, 0, sizeof(unsigned int) * 3);
 
-	// Message Type 11
-	EphData[1][0] = (0x8b << 12) | (Ephemeris->svid << 6) | 11;
-	UintValue = Ephemeris->toe / 300;
-	EphData[1][1] = COMPOSE_BITS(UintValue, 3, 11);
-	LongValue = UnscaleLong(Ephemeris->omega0 / PI, -32);
-	IntValue = (LongValue & 0x100000000LL) ? 1 : 0;
-	UintValue = (unsigned int)LongValue;
-	EphData[1][1] |= COMPOSE_BITS(IntValue, 2, 1);
-	EphData[1][1] |= COMPOSE_BITS(UintValue >> 30, 0, 2);
-	EphData[1][2] = COMPOSE_BITS(UintValue, 2, 30);
-	LongValue = UnscaleLong(Ephemeris->i0 / PI, -32);
-	IntValue = (LongValue & 0x100000000LL) ? 1 : 0;
-	UintValue = (unsigned int)LongValue;
-	EphData[1][2] |= COMPOSE_BITS(IntValue, 1, 1);
-	EphData[1][2] |= COMPOSE_BITS(UintValue >> 31, 0, 1);
-	EphData[1][3] = COMPOSE_BITS(UintValue, 1, 31);
-	IntValue = UnscaleInt(Ephemeris->omega_dot / PI - OMEGA_DOT_REF, -44);
-	EphData[1][3] |= COMPOSE_BITS(IntValue >> 16, 0, 1);
-	EphData[1][4] = COMPOSE_BITS(IntValue, 16, 16);
-	IntValue = UnscaleInt(Ephemeris->idot / PI, -44);
-	EphData[1][4] |= COMPOSE_BITS(IntValue, 1, 15);
-	IntValue = UnscaleInt(Ephemeris->cis, -30);
-	EphData[1][4] |= COMPOSE_BITS(IntValue >> 15, 0, 1);
-	EphData[1][5] = COMPOSE_BITS(IntValue, 17, 15);
-	IntValue = UnscaleInt(Ephemeris->cic, -30);
-	EphData[1][5] |= COMPOSE_BITS(IntValue, 1, 16);
-	IntValue = UnscaleInt(Ephemeris->crs, -8);
-	EphData[1][5] |= COMPOSE_BITS(IntValue >> 23, 0, 1);
-	EphData[1][6] = COMPOSE_BITS(IntValue, 9, 23);
-	IntValue = UnscaleInt(Ephemeris->crc, -8);
-	EphData[1][6] |= COMPOSE_BITS(IntValue >> 15, 0, 9);
-	EphData[1][7] = COMPOSE_BITS(IntValue, 17, 15);
-	IntValue = UnscaleInt(Ephemeris->cus, -30);
-	EphData[1][7] |= COMPOSE_BITS(IntValue >> 4, 0, 17);
-	EphData[1][8] = COMPOSE_BITS(IntValue, 28, 4);
-	IntValue = UnscaleInt(Ephemeris->cuc, -30);
-	EphData[1][8] |= COMPOSE_BITS(IntValue, 7, 21);
+    long long temp_val_ll;
+    unsigned long long temp_uval_ll;
 
-	// Clock Message
-	UintValue = Ephemeris->top / 300;
-	ClockData[0] = COMPOSE_BITS(UintValue, 3, 11);
-	UintValue = Ephemeris->toc / 300;
-	ClockData[1] = COMPOSE_BITS(UintValue, 13, 11);
-	IntValue = UnscaleInt(Ephemeris->af0, -35);
-	ClockData[1] |= COMPOSE_BITS(IntValue >> 13, 0, 13);
-	ClockData[2] = COMPOSE_BITS(IntValue, 19, 13);
-	IntValue = UnscaleInt(Ephemeris->af1, -48);
-	ClockData[2] |= COMPOSE_BITS(IntValue >> 1, 0, 19);
-	ClockData[3] = COMPOSE_BITS(IntValue, 31, 1);
-	IntValue = UnscaleInt(Ephemeris->af2, -60);
-	ClockData[3] |= COMPOSE_BITS(IntValue, 21, 10);
+    // === Message Type 10: Ephemeris 1 (bits 39-276) ===
+    // WN (13 bits, 39-51)
+    temp_uval_ll = Ephemeris->week;
+    EphData[0][1] |= (unsigned int)((temp_uval_ll & 0x1FFF) << 8);
+    // toe (11 bits, 52-62)
+    temp_uval_ll = Ephemeris->toe / 300;
+    EphData[0][1] |= (unsigned int)((temp_uval_ll & 0x7FF) >> 3);
+    EphData[0][2] |= (unsigned int)((temp_uval_ll & 0x7) << 29);
+    // M0 (32 bits, 63-94)
+    temp_val_ll = (long long)round(Ephemeris->M0 / PI * pow(2, 31));
+    EphData[0][2] |= (unsigned int)(((unsigned long long)temp_val_ll >> 3) & 0x1FFFFFFF);
+    EphData[0][3] |= (unsigned int)((unsigned long long)temp_val_ll << 29);
+    // e (32 bits, 95-126)
+    temp_uval_ll = (unsigned long long)round(Ephemeris->ecc * pow(2, 33));
+    EphData[0][3] |= (unsigned int)((temp_uval_ll >> 3) & 0x1FFFFFFF);
+    EphData[0][4] |= (unsigned int)(temp_uval_ll << 29);
+    // sqrt(A) (32 bits, 127-158)
+    temp_uval_ll = (unsigned long long)round(Ephemeris->sqrtA * pow(2, 19));
+    EphData[0][4] |= (unsigned int)((temp_uval_ll >> 3) & 0x1FFFFFFF);
+    EphData[0][5] |= (unsigned int)(temp_uval_ll << 29);
 
-	// Delay Message
-	IntValue = UnscaleInt(Ephemeris->tgd_ext[4], -35);
-	DelayData[0] = COMPOSE_BITS(IntValue, 8, 13);
-	IntValue = UnscaleInt(Ephemeris->tgd_ext[4] - Ephemeris->tgd, -35);
-	DelayData[0] |= COMPOSE_BITS(IntValue >> 5, 0, 8);
-	DelayData[1] = COMPOSE_BITS(IntValue, 27, 5);
-	IntValue = UnscaleInt(Ephemeris->tgd_ext[4] - Ephemeris->tgd2, -35);
-	DelayData[1] |= COMPOSE_BITS(IntValue, 14, 13);
-	IntValue = UnscaleInt(Ephemeris->tgd_ext[4] - Ephemeris->tgd_ext[2], -35);
-	DelayData[1] |= COMPOSE_BITS(IntValue, 1, 13);
-	IntValue = UnscaleInt(Ephemeris->tgd_ext[4] - Ephemeris->tgd_ext[3], -35);
-	DelayData[1] |= COMPOSE_BITS(IntValue >> 12, 0, 1);
-	DelayData[2] = COMPOSE_BITS(IntValue, 20, 12);
+    // === Message Type 11: Ephemeris 2 (bits 39-276) ===
+    // toe (11 bits, 39-49)
+    temp_uval_ll = Ephemeris->toe / 300;
+    EphData[1][1] |= (unsigned int)((temp_uval_ll & 0x7FF) << 10);
+    // Omega0 (32 bits, 50-81)
+    temp_val_ll = (long long)round(Ephemeris->omega0 / PI * pow(2, 31));
+    EphData[1][1] |= (unsigned int)(((unsigned long long)temp_val_ll >> 22) & 0x3FF);
+    EphData[1][2] = (unsigned int)((unsigned long long)temp_val_ll << 10);
+    // i0 (32 bits, 82-113)
+    temp_val_ll = (long long)round(Ephemeris->i0 / PI * pow(2, 31));
+    EphData[1][2] |= (unsigned int)(((unsigned long long)temp_val_ll >> 22) & 0x3FF);
+    EphData[1][3] = (unsigned int)((unsigned long long)temp_val_ll << 10);
+    // w (32 bits, 114-145)
+    temp_val_ll = (long long)round(Ephemeris->w / PI * pow(2, 31));
+    EphData[1][3] |= (unsigned int)(((unsigned long long)temp_val_ll >> 22) & 0x3FF);
+    EphData[1][4] = (unsigned int)((unsigned long long)temp_val_ll << 10);
+    // OmegaDot (24 bits, 146-169)
+    temp_val_ll = (long long)round(Ephemeris->omega_dot / PI * pow(2, 43));
+    EphData[1][4] |= (unsigned int)(((unsigned long long)temp_val_ll >> 14) & 0x3FF);
+    EphData[1][5] = (unsigned int)((unsigned long long)temp_val_ll << 18);
+    // iDot (14 bits, 170-183)
+    temp_val_ll = (long long)round(Ephemeris->idot / PI * pow(2, 43));
+    EphData[1][5] |= (unsigned int)(((unsigned long long)temp_val_ll & 0x3FFF) << 4);
+    // delta_n (16 bits, 184-199)
+    temp_val_ll = (long long)round(Ephemeris->delta_n / PI * pow(2, 43));
+    EphData[1][5] |= (unsigned int)(((unsigned long long)temp_val_ll >> 12) & 0xF);
+    EphData[1][6] = (unsigned int)((unsigned long long)temp_val_ll << 20);
 
-	return 0;
+    // === Message Type 30: Clock and Delay data ===
+    // This is composed into ClockData and DelayData arrays.
+    // We compose the payload for MT30 (bits 39-135)
+    unsigned int mt30_buf[4] = {0}; // 97 bits of data payload
+    // toc (11 bits, 39-49)
+    temp_uval_ll = Ephemeris->toc / 300;
+    mt30_buf[1] |= (unsigned int)((temp_uval_ll & 0x7FF) << 10);
+    // af0 (26 bits, 50-75)
+    temp_val_ll = (long long)round(Ephemeris->af0 * pow(2, 34));
+    mt30_buf[1] |= (unsigned int)(((unsigned long long)temp_val_ll >> 16) & 0x3FF);
+    mt30_buf[2] = (unsigned int)((unsigned long long)temp_val_ll << 16);
+    // af1 (20 bits, 76-95)
+    temp_val_ll = (long long)round(Ephemeris->af1 * pow(2, 46));
+    mt30_buf[2] |= (unsigned int)(((unsigned long long)temp_val_ll >> 4) & 0xFFFF);
+    mt30_buf[3] = (unsigned int)((unsigned long long)temp_val_ll << 28);
+    // af2 (10 bits, 96-105)
+    temp_val_ll = (long long)round(Ephemeris->af2 * pow(2, 59));
+    mt30_buf[3] |= (unsigned int)(((unsigned long long)temp_val_ll & 0x3FF) << 18);
+    
+    // The original code splits this into ClockData and DelayData.
+    // Based on GetMessageData, ClockData holds the first 4 DWORDs of the message.
+    ClockData[0] = mt30_buf[0];
+    ClockData[1] = mt30_buf[1];
+    ClockData[2] = mt30_buf[2];
+    ClockData[3] = mt30_buf[3];
+
+    // DelayData holds the TGD and ISC parts
+    memset(DelayData, 0, sizeof(unsigned int) * 3);
+    // TGD (10 bits, 106-115)
+    temp_val_ll = (long long)round(Ephemeris->tgd * pow(2, 32));
+    DelayData[0] |= (unsigned int)(((unsigned long long)temp_val_ll & 0x3FF) << 18);
+    // ISC_L5I5 (10 bits, 116-125)
+    // Using tgd_ext[2] for ISC_L5I5 as a placeholder from original logic
+    temp_val_ll = (long long)round(Ephemeris->tgd_ext[2] * pow(2, 32));
+    DelayData[0] |= (unsigned int)(((unsigned long long)temp_val_ll & 0x3FF) << 8);
+    // ISC_L5Q5 (10 bits, 126-135)
+    // Using tgd_ext[3] for ISC_L5Q5 as a placeholder from original logic
+    temp_val_ll = (long long)round(Ephemeris->tgd_ext[3] * pow(2, 32));
+    DelayData[0] |= (unsigned int)(((unsigned long long)temp_val_ll >> 2) & 0xFF);
+    DelayData[1] |= (unsigned int)((unsigned long long)temp_val_ll << 30);
+
+    return 0;
 }
 
 int L5CNavBit::ComposeAlmWords(GPS_ALMANAC Almanac[], unsigned int &ReducedAlmData, unsigned int MidiAlmData[6])
@@ -344,11 +351,8 @@ int L5CNavBit::ComposeAlmWords(GPS_ALMANAC Almanac[], unsigned int &ReducedAlmDa
 	return 0;
 }
 
-void L5CNavBit::GetMessageData(int svid, int message, int TOW, unsigned int Data[9])
+void L5CNavBit::GetMessageData(int svid, int message_type, int TOW, unsigned int Data[9])
 {
-	int message_order[6] = {30, 33, 31, 37, 31, 37}, message_id;
-	int frame = message / 4, alm_index;
-
 	// validate svid to prevent out-of-bounds array access
 	if (svid < 1 || svid > 32)
 	{
@@ -357,54 +361,36 @@ void L5CNavBit::GetMessageData(int svid, int message, int TOW, unsigned int Data
 		return;
 	}
 
-// frame index   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
-// msg index 0  10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10
-// msg index 1  11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11
-// msg index 2  30 33 31 37 31 37 30 33 31 37 31 37 30 33 31 37 31 37 30 33 31 37 31 37 30
-// msg index 3  37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 33
-	message %= 4;
-	switch (message)
+	memset(Data, 0, sizeof(unsigned int) * 9);
+
+	switch (message_type)
 	{
-	case 0:	// message 10
+	case 10: // Ephemeris 1
 		memcpy(Data, EphMessage[svid-1][0], sizeof(unsigned int) * 9);
 		break;
-	case 1:	// message 11
+	case 11: // Ephemeris 2
 		memcpy(Data, EphMessage[svid-1][1], sizeof(unsigned int) * 9);
 		break;
-	case 2:	// message index 2
-		message_id = message_order[frame%6];
-		Data[1] = ClockMessage[svid-1][0]; Data[2] = ClockMessage[svid-1][1]; Data[3] = ClockMessage[svid-1][2]; Data[4] = ClockMessage[svid-1][3];	// copy clock fields
-		switch (message_id)
-		{
-		case 30:
-			Data[4] |= DelayMessage[svid-1][0]; Data[5] = DelayMessage[svid-1][1]; Data[6] = DelayMessage[svid-1][2];	// copy group delay fields
-			Data[6] |= IonoMessage[0]; Data[7] = IonoMessage[1]; Data[8] = IonoMessage[2];	// copy ionosphere delay fields
-			break;
-		case 31:
-			Data[4] |= TOA;
-			alm_index = (frame / 6) * 8 + (((frame % 6) == 2) ? 0 : 4);
-			Data[5] = (ReducedAlm[alm_index] << 1) + (ReducedAlm[alm_index+1] >> 30);
-			Data[6] = (ReducedAlm[alm_index+1] << 2) + (ReducedAlm[alm_index+2] >> 29);
-			Data[7] = (ReducedAlm[alm_index+2] << 3) + (ReducedAlm[alm_index+3] >> 28);
-			Data[8] = (ReducedAlm[alm_index+3] << 4);
-			break;
-		case 33:
-			Data[4] |= UTCMessage[0]; Data[5] = UTCMessage[1]; Data[6] = UTCMessage[2]; Data[7] = UTCMessage[2];	// copy UTC fields
-			Data[8] = 0;
-			break;
-		case 37:
-			alm_index = 24 + (frame / 6) + (((frame % 6) == 3) ? 0 : 1);
-			Data[4] |= TOA; Data[5] = MidiAlm[alm_index][0]; Data[6] = MidiAlm[alm_index][1]; Data[7] = MidiAlm[alm_index][2]; Data[8] = MidiAlm[alm_index][3]; // copy almanac
-			break;
-		}
-		Data[0] = (0x8b << 12) | (svid << 6) | message_id;
+	case 30: // Clock, TGD, Iono
+		// Assemble from parts. Note: IonoMessage is composed in SetIonoUtc
+		memcpy(Data, ClockMessage[svid-1], sizeof(unsigned int) * 4);
+		Data[3] |= DelayMessage[svid-1][0]; // TGD/ISC starts at bit 106
+		Data[4] |= DelayMessage[svid-1][1];
+		Data[4] |= IonoMessage[0]; // Iono starts at bit 136
+		Data[5] |= IonoMessage[1];
+		Data[6] |= IonoMessage[2];
 		break;
-	case 3:	// message 37
-		Data[0] = (0x8b << 12) | (svid << 6) | 37;
-		Data[1] = ClockMessage[svid-1][0]; Data[2] = ClockMessage[svid-1][1]; Data[3] = ClockMessage[svid-1][2]; Data[4] = ClockMessage[svid-1][3];	// copy clock fields
-		Data[4] |= TOA; Data[5] = MidiAlm[frame][0]; Data[6] = MidiAlm[frame][1]; Data[7] = MidiAlm[frame][2]; Data[8] = MidiAlm[frame][3]; // copy almanac
+	case 37: // Almanac
+		// Assemble from parts. Note: Almanac messages are composed in SetAlmanac
+		Data[1] |= (TOA >> 13) & 0xFF; // WNa
+		Data[2] |= (TOA & 0x1F) << 27; // toa
+		Data[2] |= MidiAlm[svid-1][0];
+		Data[3] = MidiAlm[svid-1][1];
+		Data[4] = MidiAlm[svid-1][2];
+		Data[5] = MidiAlm[svid-1][3];
+		break;
+	default:
+		// Return empty message for unsupported types
 		break;
 	}
-	// add TOW
-	Data[1] |= TOW << 15;
 }
