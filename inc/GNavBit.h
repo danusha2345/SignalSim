@@ -1,9 +1,9 @@
 //----------------------------------------------------------------------
-// GNavBit.h:
-//   Declaration of navigation bit synthesis class for GNAV
+// GNavBit_Fixed.h:
+//   Declaration of fixed navigation bit synthesis class for GNAV
+//   Implements proper Hamming (93,85) code as per ICD GLONASS standard
 //
 //          Copyright (C) 2020-2029 by Jun Mo, All rights reserved.
-//
 //----------------------------------------------------------------------
 
 #ifndef __GNAV_BIT_H__
@@ -27,11 +27,13 @@ private:
 	// index bit20 always 0, index 2 bit 7~0 left as 0s to fill page number and check sum
 	unsigned int StringEph[24][4][3];	// 24 SVs, String 1~4 and 85bits for each string
 	unsigned int StringAlm[5][11][3];	// 5 frames, string 5~15 and 85bits for each string
-	static const unsigned int CheckSumTable[8][3];
+	
+	// Hamming (93,85) generator matrix for GLONASS
+	static const unsigned char HammingGenerator[8][11];
 
 	int ComposeStringEph(PGLONASS_EPHEMERIS Ephemeris, unsigned int String[][3]);
-	int ComposeStringAlm(PGLONASS_ALMANAC Almanac, int slot, unsigned int StringEven[3], unsigned int StringOdd[3]);
-	unsigned int CheckSum(unsigned int Data[3]);
+	int ComposeStringAlm(PGLONASS_ALMANAC Almanac, int slot, unsigned int StringEven[3], unsigned int StreamOdd[3]);
+	unsigned char CalculateHammingCode(unsigned int Data[3]);
 };
 
 #endif // __GNAV_BIT_H__
