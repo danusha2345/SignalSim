@@ -8,6 +8,7 @@
 
 #include <typeinfo>
 #include <string.h>
+#include <cstring>
 
 #include "GnssTime.h"
 #include "SatelliteSignal.h"
@@ -47,6 +48,11 @@ CSatelliteSignal::CSatelliteSignal()
 {
 	CurrentFrame = Svid = -1;
 	NavData = (NavBit *)0;
+	IsInTimeMarker = false;
+	memset(TimeMarkerBits, 0, sizeof(TimeMarkerBits));
+	memset(DataBits, 0, sizeof(DataBits));
+	SecondaryCode = 0;
+	SecondaryLength = 0;
 }
 
 CSatelliteSignal::~CSatelliteSignal()
@@ -170,12 +176,54 @@ BOOL CSatelliteSignal::GetSatelliteSignal(GNSS_TIME TransmitTime, complex_number
 	if (TransmitTime.MilliSeconds < 0)	// protection on negative millisecond
 		TransmitTime.MilliSeconds += 604800000;
 
-	Milliseconds = TransmitTime.MilliSeconds + (GalileoE1Signal ? 1000 : 0);	// E1 page has 1000ms bias to week boundary
-	FrameNumber = Milliseconds / Attribute->FrameLength;	// subframe/page number
-	Milliseconds %= Attribute->FrameLength;
-	BitNumber = Milliseconds / BitLength;	// current bit position within current subframe/page
-	Milliseconds %= BitLength;
-	BitPos = Milliseconds / Attribute->CodeLength;	// coded round in data bit
+	// Для ГЛОНАСС FDMA обработка временной метки
+	if (SatSystem == GlonassSystem && (SatSignal == SIGNAL_INDEX_G1 || SatSignal == SIGNAL_INDEX_G2))
+	{
+		// Каждая строка ГЛОНАСС длится 2000 мс
+		// Первые 300 мс - временная метка (30 бит × 10 мс/бит)
+		// Последние 1700 мс - навигационные данные (100 бит)
+		int StringPosition = TransmitTime.MilliSeconds % 2000;
+		
+		if (StringPosition < 300)  // Передаём временную метку
+		{
+			// Загрузить временную метку, если начало новой строки
+			if (StringPosition == 0)
+			{
+				GNavBit::GetTimeMarker(TimeMarkerBits);
+			}
+			
+			IsInTimeMarker = true;
+			int TimeMarkerBitIndex = StringPosition / 10;  // 10 мс на бит временной метки
+			DataBit = (TimeMarkerBitIndex < 30) ? (TimeMarkerBits[TimeMarkerBitIndex] ? -1 : 1) : 1;
+			PilotBit = 0;
+			
+			// Установить сигналы
+			DataSignal = complex_number((double)DataBit, 0);
+			PilotSignal = complex_number(0, 0);
+			return TRUE;
+		}
+		else  // Передаём навигационные данные
+		{
+			IsInTimeMarker = false;
+			// Корректируем время для навигационных данных
+			Milliseconds = TransmitTime.MilliSeconds - 300;  // Вычитаем время временной метки
+			FrameNumber = TransmitTime.MilliSeconds / Attribute->FrameLength;
+			Milliseconds %= Attribute->FrameLength;
+			// Пересчитываем позицию бита с учётом того, что навигационные данные начинаются после временной метки
+			BitNumber = (StringPosition - 300) * 100 / 1700;  // 100 бит за 1700 мс
+			if (BitNumber >= 100) BitNumber = 99;  // Защита от переполнения
+			BitPos = ((StringPosition - 300) % 17) / Attribute->CodeLength;  // 17 мс на бит навигационных данных
+		}
+	}
+	else
+	{
+		Milliseconds = TransmitTime.MilliSeconds + (GalileoE1Signal ? 1000 : 0);	// E1 page has 1000ms bias to week boundary
+		FrameNumber = Milliseconds / Attribute->FrameLength;	// subframe/page number
+		Milliseconds %= Attribute->FrameLength;
+		BitNumber = Milliseconds / BitLength;	// current bit position within current subframe/page
+		Milliseconds %= BitLength;
+		BitPos = Milliseconds / Attribute->CodeLength;	// coded round in data bit
+	}
 
 	if (FrameNumber != CurrentFrame)
 	{
@@ -190,7 +238,16 @@ BOOL CSatelliteSignal::GetSatelliteSignal(GNSS_TIME TransmitTime, complex_number
 		CurrentFrame = FrameNumber;
 	}
 
-	DataBit = (DataBits[BitNumber] ? -1 : 1) * ((Attribute->NHCode & (1 << BitPos)) ? -1 : 1);
+	// Для ГЛОНАСС, когда передаём навигационные данные после временной метки
+	if (SatSystem == GlonassSystem && (SatSignal == SIGNAL_INDEX_G1 || SatSignal == SIGNAL_INDEX_G2) && !IsInTimeMarker)
+	{
+		// DataBit уже установлен из навигационных данных
+		DataBit = (DataBits[BitNumber] ? -1 : 1);
+	}
+	else if (!IsInTimeMarker)  // Для других систем
+	{
+		DataBit = (DataBits[BitNumber] ? -1 : 1) * ((Attribute->NHCode & (1 << BitPos)) ? -1 : 1);
+	}
 	if (SecondaryCode)
 	{
 		SecondaryPosition = (TransmitTime.MilliSeconds / Attribute->CodeLength) % SecondaryLength;	// position in secondary code
@@ -277,8 +334,12 @@ BOOL CSatelliteSignal::GetSatelliteSignal(GNSS_TIME TransmitTime, complex_number
 		{
 		case SIGNAL_INDEX_G1 :
 		case SIGNAL_INDEX_G2 :
-			DataSignal = complex_number((double)DataBit, 0);
-			PilotSignal = complex_number(0, 0);
+			// Для ГЛОНАСС FDMA сигналы уже установлены при обработке временной метки
+			if (!IsInTimeMarker)
+			{
+				DataSignal = complex_number((double)DataBit, 0);
+				PilotSignal = complex_number(0, 0);
+			}
 			break;
 		case SIGNAL_INDEX_G3:
 			// G3/L3OC has both data (L3OC-I) and pilot (L3OC-Q) components

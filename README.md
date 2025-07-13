@@ -8,7 +8,7 @@ IFdataGen генерирует реалистичные GNSS сигналы пр
 
 ### Поддерживаемые системы и сигналы:
 - **GPS**: L1 C/A, L1C, L2C, L2P, L5
-- **GLONASS**: G1, G2 (FDMA)
+- **GLONASS**: G1, G2 (FDMA), G3/L3OC (CDMA)
 - **Galileo**: E1, E5a, E5b, E6
 - **BeiDou**: B1I, B1C, B2I, B2a, B2b, B3I
 
@@ -81,7 +81,8 @@ Makefile автоматически определяет наличие OpenMP �
 - `BDS_B1C_Only.json` - BeiDou B1C (1575.42 МГц) ⚠️
 - `BDS_B1I_B1C_dual.json` - BeiDou B1I+B1C (рекомендуется)
 - `GAL_E5a_only.json` - Galileo E5a (1176.45 МГц)
-- `GLO_G1_only.json` - ГЛОНАСС G1 (1602 МГц)
+- `GLO_G1_only.json` - ГЛОНАСС G1 (1602 МГц, FDMA)
+- `GLO_G3_only.json` - ГЛОНАСС G3/L3OC (1202.025 МГц, CDMA)
 
 ### Мульти-системные конфигурации
 - `GPS_BDS_GAL_L1_5MHz.json` - L1 диапазон, 5 МГц полоса
@@ -149,7 +150,7 @@ Makefile автоматически определяет наличие OpenMP �
 
 ### Поддерживаемые сигналы:
 - **GPS**: L1CA, L1C, L2C, L2P, L5
-- **GLONASS**: G1, G2 (FDMA)
+- **GLONASS**: G1, G2 (FDMA), G3/L3OC (CDMA)
 - **Galileo**: E1, E5a, E5b, E6
 - **BeiDou**: B1I, B1C, B2a, B2I, B2b, B3I
 
@@ -163,6 +164,8 @@ Makefile автоматически определяет наличие OpenMP �
 - [Документация по B1C](docs/B1C_receiver_detection_issue.md)
 - [Настройка UM980 для B1C](docs/UM980_B1C_configuration.md)
 - [Структура навигационных сообщений](docs/complete_gnss_navigation_messages_structure.md)
+- [Реализация временной метки ГЛОНАСС](docs/GLONASS_Time_Marker_Implementation.md)
+- [Полный аудит ГЛОНАСС](docs/GLONASS_Complete_Audit_Report.md)
 
 ## Лицензия
 

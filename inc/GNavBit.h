@@ -21,6 +21,10 @@ public:
 	int SetEphemeris(int svid, PGPS_EPHEMERIS Eph);
 	int SetAlmanac(GPS_ALMANAC Alm[]);
 	int SetIonoUtc(PIONO_PARAM IonoParam, PUTC_PARAM UtcParam);
+	
+	// Получить временную метку (укороченную ПСП) для синхронизации
+	// Возвращает 30-битную последовательность для текущей строки
+	static void GetTimeMarker(int *TimeMarkerBits);
 
 private:
 	// string contents: 3DOWRD to hold 85bits with index 0 bit20 as first bit to index 2 bit0 as last bit

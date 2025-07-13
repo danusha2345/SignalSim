@@ -45,6 +45,14 @@ public:
 	int CurrentFrame;		// frame number of data stream filling in Bits
 	int CurrentBitIndex;	// bit index used for current ms correlation result
 	int DataBits[1800];		// maximum 1800 encoded data bit for one subframe/page
+	
+	// GLONASS time marker support
+	int TimeMarkerBits[30];	// 30-bit time marker for GLONASS
+	bool IsInTimeMarker;		// flag to indicate if currently transmitting time marker
+	
+	// Secondary code support
+	const unsigned int *SecondaryCode;
+	int SecondaryLength;
 
 	// constant arrays for signal attributes and NH code
 	static const SignalAttribute SignalAttributes[32];

@@ -57,6 +57,21 @@ int GNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 	return 0;
 }
 
+// Генерация временной метки ГЛОНАСС (укороченная ПСП)
+// Согласно ICD ГЛОНАСС, временная метка - это 30-битная последовательность
+void GNavBit::GetTimeMarker(int *TimeMarkerBits)
+{
+	// Временная метка ГЛОНАСС: 000110111000010110010011101000b = 0x1B8593A0
+	// Это укороченная псевдослучайная последовательность для синхронизации приёмника
+	const unsigned int TIME_MARK = 0x1B8593A0;
+	const int MARK_LENGTH = 30;
+	
+	for (int i = 0; i < MARK_LENGTH; i++)
+	{
+		TimeMarkerBits[i] = (TIME_MARK >> (29 - i)) & 1;
+	}
+}
+
 int GNavBit::SetEphemeris(int svid, PGPS_EPHEMERIS Eph)
 {
 	PGLONASS_EPHEMERIS GloEph = (PGLONASS_EPHEMERIS)Eph;
