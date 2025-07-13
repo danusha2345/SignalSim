@@ -1092,9 +1092,9 @@ int CNav2Bit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBit
 
 	// do interleaving
 	p = NavBits + 52;
-	for (i = 0; i < 46; i ++)
-		for (j = 0; j < 38; j ++)
-			*p ++ = bits[j * 46 + i];
+	for (i = 0; i < 38; i ++)
+		for (j = 0; j < 46; j ++)
+			*p ++ = bits[i + j * 38];
 
 	// add subframe 1
 	NavBits[0] = (toi & 0x100) ? 1 : 0;	// MSB of TOI
