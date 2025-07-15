@@ -136,6 +136,45 @@ complex_number CSatIfSignal::GetPrnValue(double& CurChip, double CodeStep)
 	const int* DataPrn = PrnSequence->DataPrn;
 	const int* PilotPrn = PrnSequence->PilotPrn;
 	
+	// Special handling for GLONASS FDMA (G1/G2)
+	// According to ICD GLONASS, the signal is formed by XOR of three components:
+	// 1. PRN code (511 kbit/s)
+	// 2. Navigation data (50 bit/s)
+	// 3. Meander (100 Hz)
+	if (System == GlonassSystem && (SignalIndex == SIGNAL_INDEX_G1 || SignalIndex == SIGNAL_INDEX_G2)) {
+		// 1. PRN chip (511 кГц)
+		DataChip = ChipCount % DataLength;
+		int prnBit = (DataPrn && DataChip >= 0 && DataChip < DataLength && DataPrn[DataChip]) ? 1 : 0;
+		
+		// 2. Navigation data bit (50 Гц)
+		// ВАРИАНТ B: Инвертируем интерпретацию навигационного бита
+		// DataSignal.real > 0 означает логическую 1
+		// DataSignal.real < 0 означает логический 0
+		int navBit = (DataSignal.real > 0) ? 1 : 0;
+		
+		// 3. Meander (100 Гц, период 10 мс)
+		// Вычисляем текущее время в миллисекундах
+		int currentMs = SignalTime.MilliSeconds + (int)(CurChip / 511.0);
+		// Синхронизируем меандр с границами 2-секундных строк ГЛОНАСС
+		int stringStartMs = (currentMs / 2000) * 2000;
+		int relativeMs = currentMs - stringStartMs;
+		// ВАРИАНТ А: Инвертируем полярность меандра
+		int meander = ((relativeMs / 10) % 2) ? 0 : 1;
+		
+		// 4. XOR всех трёх компонентов
+		int modulatedBit = prnBit ^ navBit ^ meander;
+		
+		
+		// 5. BPSK модуляция
+		// Возвращаемся к нормальной BPSK модуляции
+		// 0 → +1 (положительная фаза)
+		// 1 → -1 (отрицательная фаза)
+		PrnValue = complex_number(modulatedBit ? -1.0 : 1.0, 0.0);
+		
+		CurChip += CodeStep;
+		return PrnValue;
+	}
+	
 	// Handle Time Division Multiplexing (TDM) for L2C
 	if (IsTdm) {
 		// For L2C: transmit L2CM on even milliseconds, L2CL on odd milliseconds

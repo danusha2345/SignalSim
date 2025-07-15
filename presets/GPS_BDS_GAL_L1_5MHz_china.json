@@ -1,6 +1,6 @@
 {
 	"version": 1.0,
-	"description": "Multi-constellation L2 band - 22 MHz minimal bandwidth - GPS L2C/L2P + Galileo E5b + BeiDou B2I/B2b",
+	"description": "GPS+BDS+GAL L1 bands (without B1I) - 5 MHz - 3 minutes",
 	"time": {
 		"type": "UTC",
 		"year": 2025,
@@ -11,23 +11,23 @@
 		"second": 30
 	},
 	"trajectory": {
-		"name": "Multi-GNSS L2 band test scenario",
+		"name": "GPS+BDS+GAL L1 test scenario",
 		"initPosition": {
 			"type": "LLA",
 			"format": "d",
-			"longitude": -114.2847,
-			"latitude": 48.4928,
+			"longitude": 110.163348,
+			"latitude": 29.769189,
 			"altitude": 100.0
 		},
 		"initVelocity": {
 			"type": "SCU",
 			"speed": 0,
-			"course": 0
+			"course": 318.91
 		},
 		"trajectoryList": [
 			{
 				"type": "Const",
-				"time": 60.0
+				"time": 180.0
 			}
 		]
 	},
@@ -38,9 +38,9 @@
 	"output": {
 		"type": "IFdata",
 		"format": "IQ8",
-		"sampleFreq": 22.0,
-		"centerFreq": 1217.37,
-		"name": "generated_files/Multi_L2_Band_22MHz_Minimal.C8",
+		"sampleFreq": 5.0,
+		"centerFreq": 1575.42,
+		"name": "generated_files/china.C8",
 		"config": {
 			"elevationMask": 5
 		},
@@ -48,27 +48,27 @@
 			{
 				"system": "GPS",
 				"signal": "L1CA",
-				"enable": false
+				"enable": true
 			},
 			{
 				"system": "GPS",
 				"signal": "L1C",
-				"enable": false
+				"enable": true
 			},
 			{
 				"system": "GPS",
 				"signal": "L2C",
-				"enable": true
-			},
-			{
-				"system": "GPS",
-				"signal": "L2P",
-				"enable": true
-			},
+				"enable": false
+			},			
 			{
 				"system": "GPS",
 				"signal": "L5",
 				"enable": false
+			},
+			{
+				"system": "BDS",
+				"signal": "B1C",
+				"enable": true
 			},
 			{
 				"system": "BDS",
@@ -77,23 +77,18 @@
 			},
 			{
 				"system": "BDS",
-				"signal": "B1C",
-				"enable": false
-			},
-			{
-				"system": "BDS",
-				"signal": "B2I",
-				"enable": true
-			},
-			{
-				"system": "BDS",
 				"signal": "B2a",
 				"enable": false
 			},
 			{
 				"system": "BDS",
+				"signal": "B2I",
+				"enable": false
+			},
+			{
+				"system": "BDS",
 				"signal": "B2b",
-				"enable": true
+				"enable": false
 			},
 			{
 				"system": "BDS",
@@ -103,7 +98,7 @@
 			{
 				"system": "Galileo",
 				"signal": "E1",
-				"enable": false
+				"enable": true
 			},
 			{
 				"system": "Galileo",
@@ -113,25 +108,30 @@
 			{
 				"system": "Galileo",
 				"signal": "E5b",
-				"enable": true
+				"enable": false
 			},
 			{
-				"system": "GLO",
+				"system": "Galileo",
+				"signal": "E6",
+				"enable": false
+			},
+			{
+				"system": "GLONASS",
 				"signal": "G1",
 				"enable": false
 			},
 			{
-				"system": "GLO",
+				"system": "GLONASS",
 				"signal": "G2",
 				"enable": false
 			}
 		]
 	},
 	"power": {
-		"noiseFloor": -174,
+		"noiseFloor": -172,
 		"initPower": {
 			"unit": "dBHz",
-			"value": 47
+			"value": 45
 		},
 		"elevationAdjust": false
 	}

@@ -1,5 +1,6 @@
 #include <math.h>
 #include <memory.h>
+#include <cstdio>
 #include "ConstVal.h"
 #include "GNavBit.h"
 
@@ -31,6 +32,7 @@ int GNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 		data[0] = StringEph[svid - 1][string_idx][0];
 		data[1] = StringEph[svid - 1][string_idx][1];
 		data[2] = StringEph[svid - 1][string_idx][2];
+		
 	}
 	else
 	{
@@ -54,6 +56,7 @@ int GNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 	for (i = 0; i < 85; i++)
 		NavBits[15 + i] = data_bits[i];
 
+
 	return 0;
 }
 
@@ -61,9 +64,10 @@ int GNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 // Согласно ICD ГЛОНАСС, временная метка - это 30-битная последовательность
 void GNavBit::GetTimeMarker(int *TimeMarkerBits)
 {
-	// Временная метка ГЛОНАСС: 000110111000010110010011101000b = 0x1B8593A0
+	// Временная метка ГЛОНАСС согласно ICD ГЛОНАСС v5.1:
+	// 111110001101110101000010010110b = 0x3E375096
 	// Это укороченная псевдослучайная последовательность для синхронизации приёмника
-	const unsigned int TIME_MARK = 0x1B8593A0;
+	const unsigned int TIME_MARK = 0x3E375096;
 	const int MARK_LENGTH = 30;
 	
 	for (int i = 0; i < MARK_LENGTH; i++)
@@ -117,6 +121,7 @@ int GNavBit::SetAlmanac(GPS_ALMANAC Alm[])
 
 int GNavBit::SetIonoUtc(PIONO_PARAM IonoParam, PUTC_PARAM UtcParam)
 {
+	
 	unsigned int NA = 0;
 	signed int tau_c = 0;
 	unsigned int N4 = 0;
@@ -220,6 +225,7 @@ int GNavBit::ComposeStringEph(PGLONASS_EPHEMERIS Ephemeris, unsigned int String[
 	String[3][2] |= COMPOSE_BITS(Ephemeris->day, 17, 11);
 	String[3][2] |= COMPOSE_BITS(Ephemeris->n, 12, 5);
 	String[3][2] |= COMPOSE_BITS(Ephemeris->M, 10, 2);
+
 
 	return 0;
 }

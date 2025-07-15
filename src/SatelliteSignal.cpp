@@ -197,9 +197,11 @@ BOOL CSatelliteSignal::GetSatelliteSignal(GNSS_TIME TransmitTime, complex_number
 			DataBit = (TimeMarkerBitIndex < 30) ? (TimeMarkerBits[TimeMarkerBitIndex] ? -1 : 1) : 1;
 			PilotBit = 0;
 			
-			// Установить сигналы
+			// Установить сигналы - передаём чистый бит временной метки
+			// Меандр будет применён через XOR в SatIfSignal.cpp
 			DataSignal = complex_number((double)DataBit, 0);
 			PilotSignal = complex_number(0, 0);
+			
 			return TRUE;
 		}
 		else  // Передаём навигационные данные
@@ -334,7 +336,8 @@ BOOL CSatelliteSignal::GetSatelliteSignal(GNSS_TIME TransmitTime, complex_number
 		{
 		case SIGNAL_INDEX_G1 :
 		case SIGNAL_INDEX_G2 :
-			// Для ГЛОНАСС FDMA сигналы уже установлены при обработке временной метки
+			// Для ГЛОНАСС FDMA передаём чистые навигационные данные
+			// Меандр будет применён через XOR в SatIfSignal.cpp
 			if (!IsInTimeMarker)
 			{
 				DataSignal = complex_number((double)DataBit, 0);

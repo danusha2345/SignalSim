@@ -228,6 +228,7 @@ int main(int argc, char* argv[])
 	NavBitArray[DataBitBCNav1]->SetIonoUtc(NavData.GetBdsIono(), NavData.GetBdsUtcParam());
 	NavBitArray[DataBitINav]->SetIonoUtc(NavData.GetGalileoIono(), NavData.GetGalileoUtcParam());
 	NavBitArray[DataBitFNav]->SetIonoUtc(NavData.GetGalileoIono(), NavData.GetGalileoUtcParam());
+	NavBitArray[DataBitGNav]->SetIonoUtc(NULL, NavData.GetGpsUtcParam());  // GLONASS uses GPS UTC parameters
 	// Find ephemeris match current time and fill in data to generate bit stream
 	for (i = 1; i <= TOTAL_GPS_SAT; i ++)
 	{
