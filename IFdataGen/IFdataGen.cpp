@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
 	for (i = 0; i < TOTAL_GLO_SAT; i++)
 		GloSatParam[i].CN0 = (int)(PowerControl.InitCN0 * 100 + 0.5);
 	// create naviagtion bit instances
-	for (i = 0; i < sizeof(NavBitArray) / sizeof(NavBit*); i++)
+	for (i = 0; (size_t)i < sizeof(NavBitArray) / sizeof(NavBit*); i++)
 	{
 		switch (i)
 		{
@@ -257,12 +257,20 @@ int main(int argc, char* argv[])
 		NavBitArray[DataBitINav]->SetEphemeris(i, GalEph[i - 1]);
 		NavBitArray[DataBitFNav]->SetEphemeris(i, GalEph[i - 1]);
 	}
+	int gloEphCount = 0;
 	for (i = 1; i <= TOTAL_GLO_SAT; i++)
 	{
 		GloEph[i - 1] = NavData.FindGloEphemeris(GlonassTime, i);
-		NavBitArray[DataBitGNav]->SetEphemeris(i, (PGPS_EPHEMERIS)GloEph[i - 1]);
+		if (GloEph[i - 1] && GloEph[i - 1]->flag) {
+			NavBitArray[DataBitGNav]->SetEphemeris(i, (PGPS_EPHEMERIS)GloEph[i - 1]);
+			gloEphCount++;
+		}
 	}
+	printf("[INFO] GLONASS ephemeris loaded: %d satellites\n", gloEphCount);
+	NavData.CompleteAlmanac(GpsSystem, UtcTime);
 	NavData.CompleteAlmanac(BdsSystem, UtcTime);
+	NavData.CompleteAlmanac(GalileoSystem, UtcTime);
+	NavData.CompleteAlmanac(GlonassSystem, UtcTime);
 	NavBitArray[DataBitLNav]->SetAlmanac(NavData.GetGpsAlmanac());
 	NavBitArray[DataBitCNav]->SetAlmanac(NavData.GetGpsAlmanac());
 	NavBitArray[DataBitCNav2]->SetAlmanac(NavData.GetGpsAlmanac());
@@ -282,9 +290,17 @@ int main(int argc, char* argv[])
 	BdsSatNumber = (OutputParam.FreqSelect[BdsSystem]) ? GetVisibleSatellite(CurPos, CurTime, OutputParam, BdsSystem, BdsEph, TOTAL_BDS_SAT, BdsEphVisible) : 0;
 	GalSatNumber = (OutputParam.FreqSelect[GalileoSystem]) ? GetVisibleSatellite(CurPos, CurTime, OutputParam, GalileoSystem, GalEph, TOTAL_GAL_SAT, GalEphVisible) : 0;
 	GloSatNumber = (OutputParam.FreqSelect[GlonassSystem]) ? GetGlonassVisibleSatellite(CurPos, GlonassTime, OutputParam, GloEph, TOTAL_GLO_SAT, GloEphVisible) : 0;
+	// Проверим, какие спутники видны и есть ли у них эфемериды
+	if (GloSatNumber > 0) {
+		printf("[GLONASS] Visible satellites: ");
+		for (int j = 0; j < GloSatNumber; j++) {
+			printf("SV%02d(k=%+2d) ", GloEphVisible[j]->n, GloEphVisible[j]->freq);
+		}
+		printf("\n");
+	}
 	ListCount = PowerControl.GetPowerControlList(0, PowerList);
 	UpdateSatParamList(CurTime, CurPos, ListCount, PowerList, NavData.GetGpsIono());
-	if(PowerList) delete[] PowerList;
+	
 
 	// create CSatIfSignal class for visible satellite, all other satellites clear pointer to NULL
 	memset(SatIfSignal, 0, sizeof(SatIfSignal));
@@ -471,9 +487,9 @@ int main(int argc, char* argv[])
 			continue;
 		IfFreq = SignalCenterFreq[3][SignalIndex] - OutputParam.CenterFreq * 1000;
 		printf("GLONASS %s with IF %+dkHz:\n", SignalName[3][SignalIndex], IfFreq / 1000);
-		printf("+----+--------------+----+--------------+----+--------------+----+--------------+\n");
-		printf("| SV | Doppler (Hz) | SV | Doppler (Hz) | SV | Doppler (Hz) | SV | Doppler (Hz) |\n");
-		printf("+----+--------------+----+--------------+----+--------------+----+--------------+\n");
+		printf("+-------+--------------+-------+--------------+-------+--------------+-------+--------------+\n");
+		printf("| SV(k) | Doppler (Hz) | SV(k) | Doppler (Hz) | SV(k) | Doppler (Hz) | SV(k) | Doppler (Hz) |\n");
+		printf("+-------+--------------+-------+--------------+-------+--------------+-------+--------------+\n");
 
 		int svCount = 0;
 		for (i = 0; i < GloSatNumber; i++)
@@ -486,16 +502,16 @@ int main(int argc, char* argv[])
 			TotalChannelNumber++;
 			
 			if (svCount % 4 == 0) printf("|");
-			printf(" %02d | %+12d |", GloEphVisible[i]->n, (int)GetDoppler(&GloSatParam[GloEphVisible[i]->n-1], SignalIndex));
+			printf(" %02d(%+2d) | %12d |", GloEphVisible[i]->n, GloEphVisible[i]->freq, (int)GetDoppler(&GloSatParam[GloEphVisible[i]->n-1], SignalIndex));
 			svCount++;
 			if (svCount % 4 == 0) printf("\n");
 		}
 		while (svCount % 4 != 0) {
-			printf("    |              |");
+			printf("        |              |");
 			svCount++;
 		}
-		if (svCount > 0 && (svCount-1) % 4 == 3) printf("\n");
-		printf("+----+--------------+----+--------------+----+--------------+----+--------------+\n\n\n");
+		if (svCount > 0) printf("\n");
+		printf("+-------+--------------+-------+--------------+-------+--------------+-------+--------------+\n\n\n");
 	}
 
 	NoiseArray = new complex_number[OutputParam.SampleFreq];
@@ -680,7 +696,7 @@ int main(int argc, char* argv[])
 
 	for (i = 0; i < TOTAL_SAT_CHANNEL; i ++)
 		if (SatIfSignal[i]) delete SatIfSignal[i];
-	for (i = 0; i < sizeof(NavBitArray) / sizeof(NavBit*); i++)
+	for (i = 0; (size_t)i < sizeof(NavBitArray) / sizeof(NavBit*); i++)
 		if (NavBitArray[i]) delete NavBitArray[i];
 	delete[] NoiseArray;
 	delete[] QuantArray;
@@ -693,7 +709,7 @@ void UpdateSatParamList(GNSS_TIME CurTime, KINEMATIC_INFO CurPos, int ListCount,
 {
 	int i, index;
 	LLA_POSITION PosLLA = EcefToLla(CurPos);
-	int TotalSatNumber = 0;
+	
 
 	for (i = 0; i < GpsSatNumber; i ++)
 	{

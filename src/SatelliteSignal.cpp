@@ -9,6 +9,7 @@
 #include <typeinfo>
 #include <string.h>
 #include <cstring>
+#include <cstdio>
 
 #include "GnssTime.h"
 #include "SatelliteSignal.h"
@@ -235,8 +236,9 @@ BOOL CSatelliteSignal::GetSatelliteSignal(GNSS_TIME TransmitTime, complex_number
 		else if (SatSystem == GalileoSystem) MaxSvid = 36;
 		else if (SatSystem == GlonassSystem) MaxSvid = 24;
 		
-		if (NavData && Svid > 0 && Svid <= MaxSvid)
+		if (NavData && Svid > 0 && Svid <= MaxSvid) {
 			NavData->GetFrameData(TransmitTime, Svid, Param, DataBits);
+		}
 		CurrentFrame = FrameNumber;
 	}
 

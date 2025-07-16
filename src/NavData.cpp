@@ -129,16 +129,16 @@ bool CNavData::AddNavData(NavDataType Type, void *NavData)
 		memcpy(&GalileoEphemerisPool[GalileoEphemerisNumber], NavData, sizeof(GPS_EPHEMERIS));
 		GalileoEphemerisNumber ++;
 		break;
-	case NavDataGlonassFdma:
+			case NavDataGlonassFdma:
 		if (GlonassEphemerisNumber == GlonassEphemerisPoolSize)
 		{
 			GlonassEphemerisPoolSize += EPH_NUMBER_INC;
-			NewEphmerisPool = (PGPS_EPHEMERIS)realloc(GlonassEphemerisPool, sizeof(GLONASS_EPHEMERIS) * GlonassEphemerisPoolSize);
-			if (NewEphmerisPool == NULL)
+			PGLONASS_EPHEMERIS NewGlonassEphPool = (PGLONASS_EPHEMERIS)realloc(GlonassEphemerisPool, sizeof(GLONASS_EPHEMERIS) * GlonassEphemerisPoolSize);
+			if (NewGlonassEphPool == NULL)
 				return false;
-			GlonassEphemerisPool = (PGLONASS_EPHEMERIS)NewEphmerisPool;
+			GlonassEphemerisPool = NewGlonassEphPool;
 		}
-		memcpy(&GlonassEphemerisPool[GlonassEphemerisNumber], NavData, sizeof(GLONASS_EPHEMERIS));
+				memcpy(&GlonassEphemerisPool[GlonassEphemerisNumber], NavData, sizeof(GLONASS_EPHEMERIS));
 		GlonassEphemerisNumber ++;
 		break;
 	case NavDataGpsUtc:

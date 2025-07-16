@@ -64,6 +64,7 @@ void CSatIfSignal::InitState(GNSS_TIME CurTime, PSATELLITE_PARAM pSatParam, NavB
 	SignalTime = StartTransmitTime = GetTransmitTime(CurTime, GetTravelTime(SatParam, SignalIndex));
 	SatelliteSignal.GetSatelliteSignal(SignalTime, DataSignal, PilotSignal);
 	HalfCycleFlag = 0;
+	
 }
 
 void CSatIfSignal::GetIfSample(GNSS_TIME CurTime)
@@ -147,26 +148,29 @@ complex_number CSatIfSignal::GetPrnValue(double& CurChip, double CodeStep)
 		int prnBit = (DataPrn && DataChip >= 0 && DataChip < DataLength && DataPrn[DataChip]) ? 1 : 0;
 		
 		// 2. Navigation data bit (50 Гц)
-		// ВАРИАНТ B: Инвертируем интерпретацию навигационного бита
-		// DataSignal.real > 0 означает логическую 1
-		// DataSignal.real < 0 означает логический 0
-		int navBit = (DataSignal.real > 0) ? 1 : 0;
+		// ВАРИАНТ C: Стандартная интерпретация BPSK
+		// DataSignal.real > 0 означает логический 0
+		// DataSignal.real < 0 означает логическую 1
+		int navBit = (DataSignal.real < 0) ? 1 : 0;
 		
 		// 3. Meander (100 Гц, период 10 мс)
 		// Вычисляем текущее время в миллисекундах
-		int currentMs = SignalTime.MilliSeconds + (int)(CurChip / 511.0);
-		// Синхронизируем меандр с границами 2-секундных строк ГЛОНАСС
-		int stringStartMs = (currentMs / 2000) * 2000;
-		int relativeMs = currentMs - stringStartMs;
-		// ВАРИАНТ А: Инвертируем полярность меандра
-		int meander = ((relativeMs / 10) % 2) ? 0 : 1;
+		// Правильно учитываем накопленные чипы
+		double chipTimeMs = CurChip / 511.0; // 511 чипов в миллисекунду
+		int totalMs = SignalTime.MilliSeconds + (int)chipTimeMs;
+		
+		// Меандр должен быть синхронизирован между всеми спутниками ГЛОНАСС
+		// Используем абсолютное время, а не относительное к строке
+		// Стандартный меандр согласно ICD ГЛОНАСС
+		int meander = ((totalMs / 10) % 2) ? 0 : 1;
+		
 		
 		// 4. XOR всех трёх компонентов
 		int modulatedBit = prnBit ^ navBit ^ meander;
 		
 		
 		// 5. BPSK модуляция
-		// Возвращаемся к нормальной BPSK модуляции
+		// Стандартная BPSK модуляция согласно ICD ГЛОНАСС
 		// 0 → +1 (положительная фаза)
 		// 1 → -1 (отрицательная фаза)
 		PrnValue = complex_number(modulatedBit ? -1.0 : 1.0, 0.0);
@@ -306,7 +310,7 @@ void CSatIfSignal::GenerateSamplesVectorized(int SampleCount, double& CurChip, d
 	// МЕГАОПТИМИЗИРОВАННАЯ генерация для максимальной скорости
 	if (!PrnSequence || !PrnSequence->DataPrn) {
 		// Быстрое заполнение нулями
-		memset(SampleArray, 0, SampleCount * sizeof(complex_number));
+		for (int k = 0; k < SampleCount; ++k) { SampleArray[k] = complex_number(0.0, 0.0); }
 		CurChip += CodeStep * SampleCount;
 		CurPhase += PhaseStep * SampleCount;
 		return;

@@ -3,11 +3,13 @@
 #include <cstdio>
 #include "ConstVal.h"
 #include "GNavBit.h"
+#include "GnssTime.h"
 
 GNavBit::GNavBit()
 {
-	memset(StringEph, 0x0, sizeof(StringEph));
-	memset(StringAlm, 0x0, sizeof(StringAlm));
+	memset(StringEph, 0, sizeof(StringEph));
+	memset(StringAlm, 0, sizeof(StringAlm));
+	memset(last_bit, 0, sizeof(last_bit));
 }
 
 GNavBit::~GNavBit()
@@ -16,46 +18,60 @@ GNavBit::~GNavBit()
 
 int GNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits)
 {
-	int i, string_idx, frame_idx;
+	int i, j, frame_idx, string_idx;
 	unsigned int data[3];
-	unsigned int checksum;
 	int data_bits[85];
 
-	if (svid < 1 || svid > 24)
-		return 1;
+	// Parameter `Param` is not used in this implementation
+	(void)Param;
 
-	string_idx = (StartTime.MilliSeconds / 2000) % 15;
-	frame_idx = (StartTime.MilliSeconds / 30000) % 5;
+	// Calculate frame and string index from GLONASS time
+	UTC_TIME utc_time = GpsTimeToUtc(StartTime, TRUE);
+	GLONASS_TIME glonass_time = UtcToGlonassTime(utc_time);
+	frame_idx = (glonass_time.MilliSeconds / 30000) % 5;
+	string_idx = (glonass_time.MilliSeconds % 30000) / 2000;
 
-	if (string_idx < 4)
+	// Get the appropriate data string (ephemeris or almanac)
+	if (string_idx < 4) // Ephemeris strings (1-4)
 	{
-		data[0] = StringEph[svid - 1][string_idx][0];
-		data[1] = StringEph[svid - 1][string_idx][1];
-		data[2] = StringEph[svid - 1][string_idx][2];
-		
+		memcpy(data, StringEph[svid - 1][string_idx], sizeof(data));
 	}
-	else
+	else // Almanac strings (5-15)
 	{
-		data[0] = StringAlm[frame_idx][string_idx - 4][0];
-		data[1] = StringAlm[frame_idx][string_idx - 4][1];
-		data[2] = StringAlm[frame_idx][string_idx - 4][2];
+		memcpy(data, StringAlm[svid - 1][string_idx - 4], sizeof(data));
 	}
 
-	AssignBits(data[0], 21, data_bits);
-	AssignBits(data[1], 32, data_bits + 21);
-	AssignBits(data[2], 32, data_bits + 53);
+	// Add checksum to the data bits
+	data[2] |= CheckSum(data);
 
-	checksum = CheckSum(data);
-
-	for (i = 0; i < 8; i++)
-		NavBits[i] = (checksum >> (7 - i)) & 1;
-	
-	for (i = 0; i < 7; i++)
-		NavBits[8 + i] = 0;
-
+	// Extract 85 bits from the 3-word data array
 	for (i = 0; i < 85; i++)
-		NavBits[15 + i] = data_bits[i];
+		data_bits[i] = (data[i / 32] >> (31 - (i % 32))) & 1;
+	
+	// Согласно ICD ГЛОНАСС, 85-й бит является "холостым" и всегда равен 0
+	data_bits[84] = 0;
 
+	// Согласно ICD ГЛОНАСС, навигационные данные передаются напрямую без относительного кодирования
+	// Относительное кодирование было удалено для соответствия стандарту
+	for (i = 0; i < 85; i++)
+	{
+		NavBits[i] = data_bits[i];
+	}
+	
+	// Добавляем 8 бит кода Хэмминга (уже включены в data через CheckSum)
+	// Код Хэмминга находится в битах 78-85 третьего слова data[2]
+	for (i = 0; i < 8; i++)
+	{
+		NavBits[85 + i] = (data[2] >> (7 - i)) & 1;
+	}
+	
+	// Добавляем 7 бит заполнения (всегда нули)
+	for (i = 0; i < 7; i++)
+	{
+		NavBits[93 + i] = 0;
+	}
+	
+	// Итого: 85 информационных + 8 проверочных + 7 заполнения = 100 бит
 
 	return 0;
 }
@@ -88,32 +104,41 @@ int GNavBit::SetEphemeris(int svid, PGPS_EPHEMERIS Eph)
 int GNavBit::SetAlmanac(GPS_ALMANAC Alm[])
 {
 	PGLONASS_ALMANAC GloAlm = (PGLONASS_ALMANAC)Alm;
-	int i, frame, string;
+	int i, sat, slot, string;
 
+	// Найти первый валидный альманах для получения NA
 	for (i = 0; i < 24; i ++)
-		if (GloAlm->flag == 1)
+		if (GloAlm[i].flag == 1)
 			break;
 	if (i == 24)
 		return 0;
 
 	unsigned int NA = GloAlm[i].day;
 	
-	for (int frame = 0; frame < 5; frame++)
+	// Для каждого спутника заполняем его часть альманаха
+	for (sat = 0; sat < 24; sat++)
 	{
-		if ((StringAlm[frame][0][0] & 0xF0000) != (5 << 16))
+		// Строка 5 содержит общие параметры времени для всех спутников
+		StringAlm[sat][0][0] = (5 << 16) | COMPOSE_BITS(NA, 5, 11);
+		StringAlm[sat][0][1] = 0;
+		StringAlm[sat][0][2] = 0;
+		
+		// Каждый спутник N передаёт альманах для 5 спутников:
+		// N, N+4, N+8, N+12, N+16 (по модулю 24)
+		for (slot = 0; slot < 5; slot++)
 		{
-			StringAlm[frame][0][0] = (5 << 16) | COMPOSE_BITS(NA, 5, 11);
-			StringAlm[frame][0][1] = 0;
-			StringAlm[frame][0][2] = 0;
+			int target_sat = (sat + slot * 4) % 24;
+			string = slot * 2 + 6;  // Строки 6,8,10,12,14 для альманаха
+			
+			
+			// Заполняем чётную и нечётную строки для данного спутника
+			ComposeStringAlm((PGLONASS_ALMANAC)Alm + target_sat, target_sat + 1, 
+				StringAlm[sat][string-5], StringAlm[sat][string-4]);
+			
+			// Добавляем номер строки и номер спутника
+			StringAlm[sat][string - 5][0] |= ((string << 16) | ((target_sat + 1) << 8));
+			StringAlm[sat][string - 4][0] |= ((string + 1) << 16);
 		}
-	}
-	for (i = 0; i < 24; i ++)
-	{
-		frame = i / 5;
-		string = (i % 5) * 2 + 6;
-		ComposeStringAlm((PGLONASS_ALMANAC)Alm + i, i + 1, StringAlm[frame][string-5], StringAlm[frame][string-4]);
-		StringAlm[frame][string - 5][0] |= ((string << 16) | ((i + 1) << 8));
-		StringAlm[frame][string - 4][0] |= ((string + 1) << 16);
 	}
 
 	return 0;
@@ -146,18 +171,19 @@ int GNavBit::SetIonoUtc(PIONO_PARAM IonoParam, PUTC_PARAM UtcParam)
 		}
 	}
 	
-	for (int frame = 0; frame < 5; frame++)
+	// Строка 5 с параметрами UTC передаётся всеми спутниками
+	for (int sat = 0; sat < 24; sat++)
 	{
-		StringAlm[frame][0][0] = (5 << 16);
-		StringAlm[frame][0][0] |= COMPOSE_BITS(NA, 5, 11);
-		StringAlm[frame][0][0] |= COMPOSE_BITS(tau_c >> 28, 0, 4);
-		StringAlm[frame][0][1] = COMPOSE_BITS(tau_c >> 4, 8, 24);
-		StringAlm[frame][0][1] |= COMPOSE_BITS(tau_c, 4, 4);
-		StringAlm[frame][0][1] |= COMPOSE_BITS(0, 3, 1);
-		StringAlm[frame][0][1] |= COMPOSE_BITS(N4, 0, 3);
-		StringAlm[frame][0][2] = COMPOSE_BITS(N4, 30, 2);
-		StringAlm[frame][0][2] |= COMPOSE_BITS(tau_GPS, 8, 22);
-		StringAlm[frame][0][2] |= COMPOSE_BITS(ln5, 7, 1);
+		StringAlm[sat][0][0] = (5 << 16);
+		StringAlm[sat][0][0] |= COMPOSE_BITS(NA, 5, 11);
+		StringAlm[sat][0][0] |= COMPOSE_BITS(tau_c >> 28, 0, 4);
+		StringAlm[sat][0][1] = COMPOSE_BITS(tau_c >> 4, 8, 24);
+		StringAlm[sat][0][1] |= COMPOSE_BITS(tau_c, 4, 4);
+		StringAlm[sat][0][1] |= COMPOSE_BITS(0, 3, 1);
+		StringAlm[sat][0][1] |= COMPOSE_BITS(N4, 0, 3);
+		StringAlm[sat][0][2] = COMPOSE_BITS(N4, 30, 2);
+		StringAlm[sat][0][2] |= COMPOSE_BITS(tau_GPS, 8, 22);
+		StringAlm[sat][0][2] |= COMPOSE_BITS(ln5, 7, 1);
 	}
 	
 	return 0;
@@ -171,9 +197,9 @@ int GNavBit::ComposeStringEph(PGLONASS_EPHEMERIS Ephemeris, unsigned int String[
 	memset(String, 0, 4 * 3 * sizeof(unsigned int));
 
 	// String 1
-	String[0][0] = COMPOSE_BITS(1, 17, 4);
-	String[0][0] |= COMPOSE_BITS(Ephemeris->P, 15, 2);
-	String[0][0] |= COMPOSE_BITS(Ephemeris->Bn, 14, 1);
+	String[0][0] = COMPOSE_BITS(1, 17, 4);  // m (позиции 81-84)
+	String[0][0] |= COMPOSE_BITS(Ephemeris->Bn, 16, 1);  // Bn (позиция 80)
+	String[0][0] |= COMPOSE_BITS(Ephemeris->P & 0x3, 14, 2);  // P1 (позиции 77-78)
 	String[0][0] |= COMPOSE_BITS(Ephemeris->tk / 30, 2, 12);
 	UintValue = (unsigned int)round(fabs(Ephemeris->x) / pow(2.0, -11));
 	String[0][0] |= COMPOSE_BITS(UintValue >> 25, 0, 2);
@@ -185,9 +211,9 @@ int GNavBit::ComposeStringEph(PGLONASS_EPHEMERIS Ephemeris, unsigned int String[
 	String[0][2] |= COMPOSE_BITS(IntValue, 9, 5);
 	
 	// String 2
-	String[1][0] = COMPOSE_BITS(2, 17, 4);
-	String[1][0] |= COMPOSE_BITS(Ephemeris->Bn, 16, 1);
-	String[1][0] |= COMPOSE_BITS(Ephemeris->P >> 2, 14, 2);
+	String[1][0] = COMPOSE_BITS(2, 17, 4);  // m (позиции 81-84)
+	String[1][0] |= COMPOSE_BITS(Ephemeris->Bn >> 1, 14, 3);  // Bn (позиции 78-80, старшие 3 бита)
+	String[1][0] |= COMPOSE_BITS((Ephemeris->P >> 2) & 0x1, 13, 1);  // P2 (позиция 77)
 	String[1][0] |= COMPOSE_BITS(Ephemeris->tb / 900, 7, 7);
 	UintValue = (unsigned int)round(fabs(Ephemeris->y) / pow(2.0, -11));
 	String[1][0] |= COMPOSE_BITS(UintValue >> 21, 0, 7);
@@ -199,10 +225,12 @@ int GNavBit::ComposeStringEph(PGLONASS_EPHEMERIS Ephemeris, unsigned int String[
 	String[1][2] |= COMPOSE_BITS(IntValue, 15, 5);
 
 	// String 3
-	String[2][0] = COMPOSE_BITS(3, 17, 4);
-	String[2][0] |= COMPOSE_BITS(Ephemeris->P >> 3, 16, 1);
+	String[2][0] = COMPOSE_BITS(3, 17, 4);  // m (позиции 81-84)
+	String[2][0] |= COMPOSE_BITS((Ephemeris->P >> 3) & 0x1, 16, 1);  // P3 (позиция 80)
 	IntValue = (int)round(Ephemeris->gamma / pow(2.0, -40));
-	String[2][0] |= COMPOSE_BITS(IntValue, 5, 11);
+	String[2][0] |= COMPOSE_BITS(IntValue, 5, 11);  // γn(tb) (позиции 69-79)
+	String[2][0] |= COMPOSE_BITS(0, 4, 1);  // ln (позиция 65) - пока 0
+	String[2][0] |= COMPOSE_BITS((Ephemeris->P >> 4) & 0x3, 2, 2);  // P (позиции 66-67)
 	UintValue = (unsigned int)round(fabs(Ephemeris->z) / pow(2.0, -11));
 	String[2][0] |= COMPOSE_BITS(UintValue >> 23, 0, 5);
 	String[2][1] = COMPOSE_BITS(UintValue, 10, 22);
@@ -220,7 +248,7 @@ int GNavBit::ComposeStringEph(PGLONASS_EPHEMERIS Ephemeris, unsigned int String[
 	IntValue = (int)round(Ephemeris->dtn / pow(2.0, -30));
 	String[3][1] |= COMPOSE_BITS(IntValue, 22, 5);
 	String[3][1] |= COMPOSE_BITS(Ephemeris->En, 17, 5);
-	String[3][1] |= COMPOSE_BITS(Ephemeris->P >> 4, 16, 1);
+	String[3][1] |= COMPOSE_BITS((Ephemeris->P >> 6) & 0x1, 1, 1);  // P4 (позиция 34)
 	String[3][2] = COMPOSE_BITS(Ephemeris->Ft, 28, 4);
 	String[3][2] |= COMPOSE_BITS(Ephemeris->day, 17, 11);
 	String[3][2] |= COMPOSE_BITS(Ephemeris->n, 12, 5);

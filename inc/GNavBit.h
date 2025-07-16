@@ -30,7 +30,8 @@ private:
 	// string contents: 3DOWRD to hold 85bits with index 0 bit20 as first bit to index 2 bit0 as last bit
 	// index bit20 always 0, index 2 bit 7~0 left as 0s to fill page number and check sum
 	unsigned int StringEph[24][4][3];	// 24 SVs, String 1~4 and 85bits for each string
-	unsigned int StringAlm[5][11][3];	// 5 frames, string 5~15 and 85bits for each string
+	unsigned int StringAlm[24][11][3];	// 24 SVs, string 5~15 and 85bits for each string
+	int last_bit[36];
 
 	int ComposeStringEph(PGLONASS_EPHEMERIS Ephemeris, unsigned int String[][3]);
 	int ComposeStringAlm(PGLONASS_ALMANAC Almanac, int slot, unsigned int StringEven[3], unsigned int StringOdd[3]);
