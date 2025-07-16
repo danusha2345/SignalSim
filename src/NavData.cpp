@@ -19,11 +19,11 @@
 CNavData::CNavData()
 {
 	GpsEphemerisNumber = BdsEphemerisNumber = GalileoEphemerisNumber = GlonassEphemerisNumber = 0;
-	GpsEphemerisPool = (PGPS_EPHEMERIS)malloc(sizeof(GPS_EPHEMERIS) * EPH_NUMBER_INC);
-	BdsEphemerisPool = (PGPS_EPHEMERIS)malloc(sizeof(GPS_EPHEMERIS) * EPH_NUMBER_INC);
-	GalileoEphemerisPool = (PGPS_EPHEMERIS)malloc(sizeof(GPS_EPHEMERIS) * EPH_NUMBER_INC);
-	GlonassEphemerisPool = (PGLONASS_EPHEMERIS)malloc(sizeof(GLONASS_EPHEMERIS) * EPH_NUMBER_INC);
-	GpsEphemerisPoolSize = BdsEphemerisPoolSize = GalileoEphemerisPoolSize = GlonassEphemerisPoolSize = EPH_NUMBER_INC;
+	GpsEphemerisPool = (PGPS_EPHEMERIS)malloc(sizeof(GPS_EPHEMERIS) * EPH_NUMBER_INIT);
+	BdsEphemerisPool = (PGPS_EPHEMERIS)malloc(sizeof(GPS_EPHEMERIS) * EPH_NUMBER_INIT);
+	GalileoEphemerisPool = (PGPS_EPHEMERIS)malloc(sizeof(GPS_EPHEMERIS) * EPH_NUMBER_INIT);
+	GlonassEphemerisPool = (PGLONASS_EPHEMERIS)malloc(sizeof(GLONASS_EPHEMERIS) * EPH_NUMBER_INIT);
+	GpsEphemerisPoolSize = BdsEphemerisPoolSize = GalileoEphemerisPoolSize = GlonassEphemerisPoolSize = EPH_NUMBER_INIT;
 	memset(&GpsUtcParam, 0, sizeof(UTC_PARAM));
 	memset(GpsAlmanac, 0, sizeof(GpsAlmanac));
 	memset(BdsAlmanac, 0, sizeof(BdsAlmanac));
@@ -92,7 +92,7 @@ bool CNavData::AddNavData(NavDataType Type, void *NavData)
 	case NavDataGpsCnav2:
 		if (GpsEphemerisNumber == GpsEphemerisPoolSize)
 		{
-			GpsEphemerisPoolSize += EPH_NUMBER_INC;
+			GpsEphemerisPoolSize *= 2;
 			NewEphmerisPool = (PGPS_EPHEMERIS)realloc(GpsEphemerisPool, sizeof(GPS_EPHEMERIS) * GpsEphemerisPoolSize);
 			if (NewEphmerisPool == NULL)
 				return false;
@@ -107,7 +107,7 @@ bool CNavData::AddNavData(NavDataType Type, void *NavData)
 	case NavDataBdsCnav3:
 		if (BdsEphemerisNumber == BdsEphemerisPoolSize)
 		{
-			BdsEphemerisPoolSize += EPH_NUMBER_INC;
+			BdsEphemerisPoolSize *= 2;
 			NewEphmerisPool = (PGPS_EPHEMERIS)realloc(BdsEphemerisPool, sizeof(GPS_EPHEMERIS) * BdsEphemerisPoolSize);
 			if (NewEphmerisPool == NULL)
 				return false;
@@ -120,7 +120,7 @@ bool CNavData::AddNavData(NavDataType Type, void *NavData)
 	case NavDataGalileoFNav:
 		if (GalileoEphemerisNumber == GalileoEphemerisPoolSize)
 		{
-			GalileoEphemerisPoolSize += EPH_NUMBER_INC;
+			GalileoEphemerisPoolSize *= 2;
 			NewEphmerisPool = (PGPS_EPHEMERIS)realloc(GalileoEphemerisPool, sizeof(GPS_EPHEMERIS) * GalileoEphemerisPoolSize);
 			if (NewEphmerisPool == NULL)
 				return false;
@@ -132,7 +132,7 @@ bool CNavData::AddNavData(NavDataType Type, void *NavData)
 			case NavDataGlonassFdma:
 		if (GlonassEphemerisNumber == GlonassEphemerisPoolSize)
 		{
-			GlonassEphemerisPoolSize += EPH_NUMBER_INC;
+			GlonassEphemerisPoolSize *= 2;
 			PGLONASS_EPHEMERIS NewGlonassEphPool = (PGLONASS_EPHEMERIS)realloc(GlonassEphemerisPool, sizeof(GLONASS_EPHEMERIS) * GlonassEphemerisPoolSize);
 			if (NewGlonassEphPool == NULL)
 				return false;
