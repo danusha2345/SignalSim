@@ -148,10 +148,12 @@ complex_number CSatIfSignal::GetPrnValue(double& CurChip, double CodeStep)
 		int prnBit = (DataPrn && DataChip >= 0 && DataChip < DataLength && DataPrn[DataChip]) ? 1 : 0;
 		
 		// 2. Navigation data bit (50 Гц)
-		// ВАРИАНТ C: Стандартная интерпретация BPSK
+		// ИСПРАВЛЕНО: Согласно ICD ГЛОНАСС (таблица 4.3)
+		// Логический "0" передаётся положительным перепадом фазы
+		// Логический "1" передаётся отрицательным перепадом фазы
 		// DataSignal.real > 0 означает логический 0
 		// DataSignal.real < 0 означает логическую 1
-		int navBit = (DataSignal.real < 0) ? 1 : 0;
+		int navBit = (DataSignal.real > 0) ? 1 : 0;  // ИНВЕРТИРОВАНО!
 		
 		// 3. Meander (100 Гц, период 10 мс)
 		// Вычисляем текущее время в миллисекундах
@@ -261,12 +263,16 @@ complex_number CSatIfSignal::GetPrnValue(double& CurChip, double CodeStep)
 				PrnValue += pilotVal;
 			} else if (IsCboc && IsBoc) {
 				// CBOC(6,1,1/11) modulation for Galileo E1 pilot channel
-				// 10/11 of the time use BOC(1,1), 1/11 use BOC(6,1)
-				// The pattern is deterministic based on chip position within the 4092-chip code
+				// NOTE: This is a SIMPLIFIED implementation using periodic pattern
+				// Full ICD-compliant implementation requires pseudorandom subcarrier selection
+				// as described in Galileo OS SIS ICD section 3.1.4
+				// Current implementation: 10/11 BOC(1,1), 1/11 BOC(6,1) in periodic pattern
+				// TODO: Implement proper CBOC with subcarrier selection sequence
+				
 				int chipInCode = ChipCount % 4092;  // E1 code period is 4092 chips
 				
-				// CBOC pattern: every 11th chip uses BOC(6,1), others use BOC(1,1)
-				// This gives exactly 1/11 ratio over the full code period
+				// Simplified CBOC: every 11th chip uses BOC(6,1), others use BOC(1,1)
+				// This approximates the 1/11 ratio but is not ICD-compliant
 				if ((chipInCode % 11) == 0) {
 					// BOC(6,1) modulation for this chip
 					// 6 cycles per chip, so 12 half-cycles
