@@ -70,6 +70,7 @@ BCNavBit::BCNavBit()
 	memset(ClockParam, 0, sizeof(ClockParam));
 	memset(IntegrityFlags, 0, sizeof(IntegrityFlags));
 	memset(HealthFlags, 0, sizeof(HealthFlags));
+	memset(TgsIscParam, 0, sizeof(TgsIscParam));
 	memset(ReducedAlmanac, 0, sizeof(ReducedAlmanac));
 	memset(MidiAlmanac, 0, sizeof(MidiAlmanac));
 	memset(BdGimIono, 0, sizeof(BdGimIono));

@@ -146,6 +146,7 @@ INavBit::INavBit()
 	GalDummyData[0] = 0xfc000000; GalDummyData[1] = GalDummyData[2] = GalDummyData[3] = 0;
 	memset(GalEphData, 0, sizeof(GalEphData));
 	memset(GalAlmData, 0, sizeof(GalAlmData));
+	memset(GalRsVector, 0, sizeof(GalRsVector));
 	memset(GalUtcData, 0, sizeof(GalUtcData));
 }
 
