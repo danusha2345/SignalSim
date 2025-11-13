@@ -15,19 +15,19 @@
 		"initPosition": {
 			"type": "LLA",
 			"format": "d",
-			"longitude": -121.915773,
-			"latitude": 37.352721,
-			"altitude": 20
+			"longitude": -119.277111,
+			"latitude": 40.753856,
+			"altitude": 40
 		},
 		"initVelocity": {
 			"type": "SCU",
-			"speed": 5,
+			"speed": 0,
 			"course": 318.91
 		},
 		"trajectoryList": [
 			{
 				"type": "Const",
-				"time": 0.2
+				"time": 160
 			}
 			
 		]
@@ -39,7 +39,7 @@
 	"output": {
 		"type": "IFdata",
 		"format": "IQ8",
-		"sampleFreq": 4.092,
+		"sampleFreq": 5.000,
 		"centerFreq": 1575.42,
 		"name": "GPS_BDS_GAL_L1CA_L1C_B1C_E1.bin",
 		"config": {
