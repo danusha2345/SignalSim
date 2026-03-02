@@ -25,7 +25,6 @@ CSatIfSignal::CSatIfSignal(int MsSampleNumber, int SatIfFreq, GnssSystem SatSyst
 		DataLength = PrnSequence->Attribute->DataPeriod * PrnSequence->Attribute->ChipRate;
 		PilotLength = PrnSequence->Attribute->PilotPeriod * PrnSequence->Attribute->ChipRate;
 	}
-	GlonassHalfCycle = ((IfFreq % 1000) != 0) ? 1 : 0;
 }
 
 CSatIfSignal::~CSatIfSignal()
@@ -36,15 +35,16 @@ CSatIfSignal::~CSatIfSignal()
 	PrnSequence = NULL;
 }
 
-void CSatIfSignal::InitState(GNSS_TIME CurTime, PSATELLITE_PARAM pSatParam, NavBit* pNavData)
+void CSatIfSignal::InitState(GNSS_TIME CurTime, CSatelliteParam *pSatParam, NavBit* pNavData)
 {
 	SatParam = pSatParam;
 	if (!SatelliteSignal.SetSignalAttribute(System, SignalIndex, pNavData, Svid))
 		SatelliteSignal.NavData = (NavBit*)0;	// if system/frequency and navigation data not match, set pointer to NULL
-	StartCarrierPhase = GetCarrierPhase(SatParam, SignalIndex);
-	SignalTime = StartTransmitTime = GetTransmitTime(CurTime, GetTravelTime(SatParam, SignalIndex));
+//	StartCarrierPhase = GetCarrierPhase(SatParam, SignalIndex);
+	StartCarrierPhase = SatParam->GetCarrierPhase(SignalIndex);
+//	SignalTime = StartTransmitTime = GetTransmitTime(CurTime, GetTravelTime(SatParam, SignalIndex));
+	SignalTime = StartTransmitTime = GetTransmitTime(CurTime, SatParam->GetTravelTime(SignalIndex));
 	SatelliteSignal.GetSatelliteSignal(SignalTime, DataSignal, PilotSignal);
-	HalfCycleFlag = 0;
 }
 
 void CSatIfSignal::GetIfSample(GNSS_TIME CurTime)
@@ -55,28 +55,28 @@ void CSatIfSignal::GetIfSample(GNSS_TIME CurTime)
 	int IntPhaseStep;
 	const PrnAttribute* CodeAttribute = PrnSequence->Attribute;
 	complex_number IfSample;
-	double Amp = pow(10, (SatParam->CN0 - 3000) / 1000.) / sqrt(SampleNumber);
+	double Amp;
 
 	if (!SatParam)
 		return;
+	Amp = pow(10, (SatParam->CN0 - 3000) / 2000.) / sqrt(SampleNumber);
 	SignalTime = StartTransmitTime;
 	SatelliteSignal.GetSatelliteSignal(SignalTime, DataSignal, PilotSignal);
-	EndCarrierPhase = GetCarrierPhase(SatParam, SignalIndex);
-	EndTransmitTime = GetTransmitTime(CurTime, GetTravelTime(SatParam, SignalIndex));
+//	EndCarrierPhase = GetCarrierPhase(SatParam, SignalIndex);
+//	EndTransmitTime = GetTransmitTime(CurTime, GetTravelTime(SatParam, SignalIndex));
+	EndCarrierPhase = SatParam->GetCarrierPhase(SignalIndex);
+	EndTransmitTime = GetTransmitTime(CurTime, SatParam->GetTravelTime(SignalIndex));
 
 	// calculate start/end signal phase and phase step (actual local signal phase is negative ADR)
 	PhaseStep = (StartCarrierPhase - EndCarrierPhase) / SampleNumber;
 	PhaseStep += IfFreq / 1000. / SampleNumber;
 	CurPhase = StartCarrierPhase - (int)StartCarrierPhase;
 	CurPhase = 1 - CurPhase;	// carrier is fractional part of negative of travel time, equvalent to 1 minus positive fractional part
+	if (SatParam->system == GlonassSystem && (SatParam->FreqID & 1) && (CurTime.MilliSeconds & 1))
+		CurPhase += 0.5;
 	CurIntPhase = (unsigned int)std::floor(CurPhase * 4294967296.);
 	IntPhaseStep = (int)std::round(PhaseStep * 4294967296.);
 	StartCarrierPhase = EndCarrierPhase;
-	if (GlonassHalfCycle)	// for GLONASS odd number FreqID, nominal IF result in half cycle toggle every 1ms
-	{
-		CurPhase += HalfCycleFlag ? 0.5 : 0.0;
-		HalfCycleFlag = 1 - HalfCycleFlag;
-	}
 
 	// get PRN count for each sample
 	TransmitMsDiff = EndTransmitTime.MilliSeconds - StartTransmitTime.MilliSeconds;

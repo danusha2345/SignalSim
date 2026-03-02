@@ -16,7 +16,7 @@ class CSatIfSignal
 public:
 	CSatIfSignal(int MsSampleNumber, int SatIfFreq, GnssSystem SatSystem, int SatSignalIndex, unsigned char SatId);
 	~CSatIfSignal();
-	void InitState(GNSS_TIME CurTime, PSATELLITE_PARAM pSatParam, NavBit* pNavData);
+	void InitState(GNSS_TIME CurTime, CSatelliteParam *pSatParam, NavBit* pNavData);
 	void GetIfSample(GNSS_TIME CurTime);
 	complex_number *SampleArray;
 
@@ -29,11 +29,11 @@ private:
 	PrnGenerate* PrnSequence;
 	int DataLength, PilotLength;
 	CSatelliteSignal SatelliteSignal;
-	PSATELLITE_PARAM SatParam;
+//	PSATELLITE_PARAM SatParam;
+	CSatelliteParam *SatParam;
 	double StartCarrierPhase, EndCarrierPhase;
 	GNSS_TIME StartTransmitTime, EndTransmitTime, SignalTime;
 	complex_number DataSignal, PilotSignal;
-	int GlonassHalfCycle, HalfCycleFlag;
 
 	complex_number GetPrnValue(double &CurChip, double CodeStep);
 	complex_number GetRotateValue(double & CurPhase, double PhaseStep);

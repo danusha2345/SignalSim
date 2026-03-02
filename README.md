@@ -61,7 +61,35 @@ The core libraries provide fundamental GNSS data processing capabilities includi
 
 ## Change List
 
+### 2026
+
+- **2/18/2026**
+  - In CNavData::FindEphemeris(), remove the filter for ephemeris with toe not multiple of 300s
+  - Adjust ephemeris parameters if toe is not multiple of 300s in CNAV/CNAV2/BCNAVx navigation message composition
+  - Add DelayModel.cpp to hold encapsulated ionosphere and troposphere delay models
+  - Create class CSatelliteParam to replace functions based on structure SATELLITE_PARAM to allow ephemeris update, different troposphere delay/ionosphere delay model and future precise ephemeris
+  - CSatIfSignal uses pointer to class CSatelliteParam instead of structure SATELLITE_PARAM
+  - All functions based on structure SATELLITE_PARAM will obsolete in the future
+  - Update application IfDataGen and JsonObsGen accordingly
+  - Application JsonObsGen and sample scenario file test_obs3.json illustrate observations get smooth during ephemeris update
+
+- **2/6/2026**
+  - Swap L1C data and pilot code generation array because they are mixed up before
+  - Add protection on GLONASS/BDS GEO ephemeris to almanac conversion in case pos/vel does not conform to an elliptical orbit
+
+- **1/20/2026**
+  - Add correct GLONASS half cycle compensation on start carrier phase for odd frequency satellites
+
+- **1/4/2026**
+  - Sort power control list by time in JsonInterpreter.cpp (sorted in XML but missed in JSON)
+  - Remove GLONASS half cycle compensation in IF generation (no need for floating point carrier calculation)
+  - Fix bug in signal amplitude calculation (SNR of each sample should be SNR=CN0-10*lg(fs)=20*lg(A/sigma))
+
 ### 2025
+
+- **11/25/2025**
+  - BCNavBit.h was forgot to be included in the previous commit
+
 - **11/22/2025**
   - Assign Galileo week# in Galileo ephemeris structure instead of GPS week# (1024 difference)
   - Fix bug that Galileo uses incorrect scale factor on toa when converting ephemeris to almanac
