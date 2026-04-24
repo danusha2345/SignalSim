@@ -27,6 +27,7 @@ SOURCES = $(TARGET).cpp \
           $(SRCDIR)/ComplexNumber.cpp \
           $(SRCDIR)/Coordinate.cpp \
           $(SRCDIR)/D1D2NavBit.cpp \
+          $(SRCDIR)/DelayModel.cpp \
           $(SRCDIR)/FNavBit.cpp \
           $(SRCDIR)/GNavBit.cpp \
           $(SRCDIR)/GnssTime.cpp \
@@ -34,6 +35,7 @@ SOURCES = $(TARGET).cpp \
           $(SRCDIR)/JsonInterpreter.cpp \
           $(SRCDIR)/JsonParser.cpp \
           $(SRCDIR)/LNavBit.cpp \
+          $(SRCDIR)/MessageOutput.cpp \
           $(SRCDIR)/NavBit.cpp \
           $(SRCDIR)/NavData.cpp \
           $(SRCDIR)/PilotBit.cpp \
@@ -126,7 +128,7 @@ install: $(BINDIR)/$(TARGET)
 # Run test
 test: $(BINDIR)/$(TARGET)
 	@echo "Running test..."
-	./$(TARGET) IfGenTest.json
+	./$(TARGET) -c configs/IfGenTest.json -vo
 
 # Help
 help:

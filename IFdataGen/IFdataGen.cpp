@@ -6,6 +6,7 @@
 #include <chrono>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <ctime>
 #ifdef _OPENMP
 #include <omp.h>
@@ -34,6 +35,7 @@ struct CommandArguments
 	bool MultiThread;
 	bool ValidateOnly;
 	bool OutputTag;
+	bool ShowVersion;
 };
 
 void UpdateSatParamList(GNSS_TIME CurTime, KINEMATIC_INFO CurPos, int ListCount, PSIGNAL_POWER PowerList, PIONO_PARAM IonoParam);
@@ -103,6 +105,7 @@ int main(int argc, char* argv[])
 	Arguments.MultiThread = true; // Default to use multi-threading
 	Arguments.ValidateOnly = false;
 	Arguments.OutputTag = false;
+	Arguments.ShowVersion = false;
 
 	SetOutputFile(stdout);
 //	SetOutputLevel(MSG_LEVEL_INFO);
@@ -116,6 +119,12 @@ int main(int argc, char* argv[])
 
 	if (!ParseCommandLineArgs(argc, argv, Arguments))
 		return 1;
+
+	if (Arguments.ShowVersion)
+	{
+		std::cout << "IFDataGen development build\n";
+		return 0;
+	}
 
 	
 	printf("\n================================================================================\n");
@@ -172,7 +181,7 @@ int main(int argc, char* argv[])
 		if ((IfFile = fopen(OutputParam.filename, "wb")) == NULL)
 		{
 			printf("[ERROR]\tFailed to open output file: %s\n", OutputParam.filename);
-			return 0;
+			return 1;
 		}
 		printf("[INFO]\tOutput file opened successfully.\n");
 	}
@@ -1107,6 +1116,7 @@ bool ParseCommandLineArgs(int argc, char* argv[], CommandArguments &Arguments)
 		"--multi-thread", "-mt",	// 4
 		"--single-thread", "-st",	// 5
 		"--tag", "-t",	// 6
+		"--version", "-v",	// 7
 	};
 	std::string arg;
 	int i = 1, index;
@@ -1150,8 +1160,12 @@ bool ParseCommandLineArgs(int argc, char* argv[], CommandArguments &Arguments)
 		case 6:	// --tag
 			Arguments.OutputTag = true;
 			break;
+		case 7:	// --version
+			Arguments.ShowVersion = true;
+			break;
 		default:
-			std::cout << "[WARNING] Unknown option " << arg << "\n";
+			std::cerr << "[ERROR] Unknown option " << arg << "\n";
+			return false;
 		}
 		i ++;	// move to next argument
 	}
