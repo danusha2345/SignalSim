@@ -436,6 +436,13 @@ int main(int argc, char* argv[])
 	int TotalVisibleSVs = GpsSatNumber + BdsSatNumber + GalSatNumber + GloSatNumber;
 	int TotalChannels = GpsSatNumber * GpsSignalCount + BdsSatNumber * BdsSignalCount + GalSatNumber * GalSignalCount + GloSatNumber * GloSignalCount;
 	printf("Total Visible SVs = %d, Total channels = %d\n\n", TotalVisibleSVs, TotalChannels);
+	if (TotalChannels > TOTAL_SAT_CHANNEL)
+	{
+		std::cerr << "[ERROR]\tRequested " << TotalChannels << " channels, maximum supported is " << TOTAL_SAT_CHANNEL << "\n";
+		for (i = 0; i < static_cast<int>(sizeof(NavBitArray) / sizeof(NavBitArray[0])); ++i)
+			delete NavBitArray[i];
+		return 1;
+	}
 
 	// Detailed satellite and signal information in compact table format
 	for (SignalIndex = SIGNAL_INDEX_L1CA; SignalIndex <= SIGNAL_INDEX_L5; SignalIndex++)

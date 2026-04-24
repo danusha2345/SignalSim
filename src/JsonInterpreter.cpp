@@ -434,9 +434,13 @@ int AssignStartVelocity(JsonObject *Object, LOCAL_SPEED &StartVel, KINEMATIC_INF
 		case 11:	// "z"
 			Velotity.z = FormatSpeed(GET_DOUBLE_VALUE(Object), SpeedUnit); break;
 		case 12:	// "speedUnit"
-			SpeedUnit = SearchDictionary(Object->Key, PARAMETER(DictionaryListCoordinate));
+			if (Object->Type == JsonObject::ValueTypeString)
+				SpeedUnit = SearchDictionary(Object->String, PARAMETER(DictionaryListCoordinate));
+			break;
 		case 13:	// "angleUnit"
-			AngleUnit = SearchDictionary(Object->Key, PARAMETER(DictionaryListCoordinate));
+			if (Object->Type == JsonObject::ValueTypeString)
+				AngleUnit = SearchDictionary(Object->String, PARAMETER(DictionaryListCoordinate));
+			break;
 		case 14:	// "speed"
 			StartVel.speed = FormatSpeed(GET_DOUBLE_VALUE(Object), SpeedUnit); break;
 		case 15:	// "course"
