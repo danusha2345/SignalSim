@@ -302,7 +302,7 @@ int CNavBit::ComposeAlmWords(GPS_ALMANAC Almanac[], unsigned int &ReducedAlmData
 	MidiAlmData[0] |= COMPOSE_BITS(IntValue >> 10, 0, 1);
 	MidiAlmData[1] = COMPOSE_BITS(IntValue, 22, 10);
 	UintValue = UnscaleUint(Almanac->sqrtA, -4);
-	MidiAlmData[1] |= COMPOSE_BITS(IntValue, 5, 17);
+	MidiAlmData[1] |= COMPOSE_BITS(UintValue, 5, 17);
 	IntValue = UnscaleInt(Almanac->omega0 / PI, -15);
 	MidiAlmData[1] |= COMPOSE_BITS(IntValue >> 11, 0, 5);
 	MidiAlmData[2] = COMPOSE_BITS(IntValue, 21, 11);
@@ -313,7 +313,7 @@ int CNavBit::ComposeAlmWords(GPS_ALMANAC Almanac[], unsigned int &ReducedAlmData
 	MidiAlmData[3] = COMPOSE_BITS(IntValue, 21, 11);
 	IntValue = UnscaleInt(Almanac->af0, -20);
 	MidiAlmData[3] |= COMPOSE_BITS(IntValue, 10, 11);
-	IntValue = UnscaleInt(Almanac->af0, -37);
+	IntValue = UnscaleInt(Almanac->af1, -37);
 	MidiAlmData[3] |= COMPOSE_BITS(IntValue, 0, 10);
 
 	ReducedAlmData = (Almanac->valid ? Almanac->svid : 0) << 25;
@@ -371,8 +371,9 @@ void CNavBit::GetMessageData(int svid, int message, int TOW, unsigned int Data[9
 			Data[6] = (ReducedAlm[alm_index+1] << 2) + (ReducedAlm[alm_index+2] >> 29);
 			Data[7] = (ReducedAlm[alm_index+2] << 3) + (ReducedAlm[alm_index+3] >> 28);
 			Data[8] = (ReducedAlm[alm_index+3] << 4);
+			break;
 		case 33:
-			Data[4] |= UTCMessage[0]; Data[5] = UTCMessage[1]; Data[6] = UTCMessage[2]; Data[7] = UTCMessage[2];	// copy UTC fields
+			Data[4] |= UTCMessage[0]; Data[5] = UTCMessage[1]; Data[6] = UTCMessage[2]; Data[7] = UTCMessage[3];	// copy UTC fields
 			Data[8] = 0;
 			break;
 		case 37:
