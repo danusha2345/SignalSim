@@ -342,7 +342,7 @@ void BCNav1Bit::ComposeSubframe3(int soh, unsigned int Flags, unsigned int Accur
 		Frame3Data[0] |= (2 << 18);	// PageID
 		Frame3Data[0] |= COMPOSE_BITS(AccurateIndex >> 13, 0, 9);	// SISAI_oc
 		Frame3Data[1] = COMPOSE_BITS(AccurateIndex, 11, 13);	// SISAI_oc
-		Frame3Data[1] = COMPOSE_BITS(AlmanacWeek >> 2, 0, 11);
+		Frame3Data[1] |= COMPOSE_BITS(AlmanacWeek >> 2, 0, 11);
 		Frame3Data[2] = COMPOSE_BITS(AlmanacWeek, 22, 2);
 		Frame3Data[2] |= COMPOSE_BITS(AlmanacToa, 14, 8);
 		SvIndex = index / 5 * 4;

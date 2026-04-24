@@ -308,7 +308,7 @@ int LNavBit::FillGpsHealthPage(GPS_ALMANAC Almanac[], unsigned int Stream4[8], u
 	Stream5[6] = COMPOSE_BITS(((Almanac[25].valid & 1) ? 0 : 0x3f), 18, 6);
 	Stream5[6] |= COMPOSE_BITS(((Almanac[26].valid & 1) ? 0 : 0x3f), 12, 6);
 	Stream5[6] |= COMPOSE_BITS(((Almanac[27].valid & 1) ? 0 : 0x3f), 6, 6);
-	Stream5[6] = COMPOSE_BITS(((Almanac[28].valid & 1) ? 0 : 0x3f), 0, 6);
+	Stream5[6] |= COMPOSE_BITS(((Almanac[28].valid & 1) ? 0 : 0x3f), 0, 6);
 	Stream5[7] = COMPOSE_BITS(((Almanac[29].valid & 1) ? 0 : 0x3f), 18, 6);
 	Stream5[7] |= COMPOSE_BITS(((Almanac[30].valid & 1) ? 0 : 0x3f), 12, 6);
 	Stream5[7] |= COMPOSE_BITS(((Almanac[31].valid & 1) ? 0 : 0x3f), 6, 6);
