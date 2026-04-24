@@ -238,7 +238,7 @@ int INavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 	EncodeWord = CrcResult << 8;
 	for (; i < 106 / 2; i ++)	// encode CRC
 		OddPart[i/2] = (OddPart[i/2] << 4) + GalConvolutionEncode(ConvEncodeBits, EncodeWord);
-	EncodeWord = Param ? 0 : SSP[page % 3];
+	EncodeWord = (Param && Word != 63) ? SSP[page % 3] : 0;
 	for (; i < 114 / 2; i ++)	// encode SSP
 		OddPart[i/2] = (OddPart[i/2] << 4) + GalConvolutionEncode(ConvEncodeBits, EncodeWord);
 	EncodeWord = 0;	// append 6 zeros as tail
