@@ -117,7 +117,7 @@ int BCNavBit::SetEphemeris(int svid, PGPS_EPHEMERIS Eph)
 	Data[2] = COMPOSE_BITS(IntValue, 0, 24);
 	IntValue = UnscaleInt(Eph->delta_n / PI, -44);	// delta_n
 	Data[3] = COMPOSE_BITS(IntValue, 7, 17);
-	IntValue = UnscaleInt(Eph->delta_n_dot, -57);	// delta n dot
+	IntValue = UnscaleInt(Eph->delta_n_dot / PI, -57);	// delta n dot
 	Data[3] |= COMPOSE_BITS(IntValue >> 16, 0, 7);
 	Data[4] = COMPOSE_BITS(IntValue, 8, 16);
 	LongValue = UnscaleLong(Eph->M0 / PI, -32);
