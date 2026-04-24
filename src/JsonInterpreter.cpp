@@ -103,6 +103,8 @@ static double FormatSpeed(double Value, int Format);
 
 BOOL AssignParameters(JsonObject *Object, PUTC_TIME UtcTime, PLLA_POSITION StartPos, PLOCAL_SPEED StartVel, CTrajectory *Trajectory, CNavData *NavData, POUTPUT_PARAM OutputParam, CPowerControl *PowerControl, PDELAY_CONFIG DelayConfig)
 {
+	BOOL Status = TRUE;
+
 	Object = JsonStream::GetFirstObject(Object);
 	while (Object)
 	{
@@ -116,11 +118,11 @@ BOOL AssignParameters(JsonObject *Object, PUTC_TIME UtcTime, PLLA_POSITION Start
 			break;
 		case 2: // "ephemeris"
 			if (NavData)
-				SetEphemeris(Object, *NavData);
+				Status &= SetEphemeris(Object, *NavData);
 			break;
 		case 3: // "almanac"
 			if (NavData)
-				SetAlmanac(Object, *NavData);
+				Status &= SetAlmanac(Object, *NavData);
 			break;
 		case 4:	// "output"
 			if (OutputParam) SetOutputParam(JsonStream::GetFirstObject(Object), *OutputParam); break;
@@ -132,7 +134,7 @@ BOOL AssignParameters(JsonObject *Object, PUTC_TIME UtcTime, PLLA_POSITION Start
 		Object = JsonStream::GetNextObject(Object);
 	}
 
-	return TRUE;
+	return Status;
 }
 
 BOOL AssignStartTime(JsonObject *Object, UTC_TIME &UtcTime)
@@ -238,61 +240,71 @@ BOOL SetTrajectory(JsonObject *Object, LLA_POSITION &StartPos, LOCAL_SPEED &Star
 BOOL SetEphemeris(JsonObject *Object, CNavData &NavData)
 {
 	JsonObject *ObjectArray;
+	BOOL Status = TRUE;
 
 	if (Object->Type == JsonObject::ValueTypeObject)
-		SetEphemerisFile(JsonStream::GetFirstObject(Object), NavData);
+		Status = SetEphemerisFile(JsonStream::GetFirstObject(Object), NavData);
 	else if (Object->Type == JsonObject::ValueTypeArray)
 	{
 		ObjectArray = JsonStream::GetFirstObject(Object);
 		while (ObjectArray)
 		{
 			if (ObjectArray->Type == JsonObject::ValueTypeObject)
-				SetEphemerisFile(JsonStream::GetFirstObject(ObjectArray), NavData);
+				Status &= SetEphemerisFile(JsonStream::GetFirstObject(ObjectArray), NavData);
 			ObjectArray = JsonStream::GetNextObject(ObjectArray);
 		}
 	}
-	return TRUE;
+	else
+		Status = FALSE;
+	return Status;
 }
 
 BOOL SetEphemerisFile(JsonObject *Object, CNavData &NavData)
 {
+	BOOL Status = FALSE;
+
 	while (Object)
 	{
 		if (strcmp(Object->Key, "name") == 0)
-			NavData.ReadNavFile(Object->String);
+			Status = NavData.ReadNavFile(Object->String);
 		Object = JsonStream::GetNextObject(Object);
 	}
-	return TRUE;
+	return Status;
 }
 
 BOOL SetAlmanac(JsonObject *Object, CNavData &NavData)
 {
 	JsonObject *ObjectArray;
+	BOOL Status = TRUE;
 
 	if (Object->Type == JsonObject::ValueTypeObject)
-		SetAlmanacFile(JsonStream::GetFirstObject(Object), NavData);
+		Status = SetAlmanacFile(JsonStream::GetFirstObject(Object), NavData);
 	else if (Object->Type == JsonObject::ValueTypeArray)
 	{
 		ObjectArray = JsonStream::GetFirstObject(Object);
 		while (ObjectArray)
 		{
 			if (ObjectArray->Type == JsonObject::ValueTypeObject)
-				SetAlmanacFile(JsonStream::GetFirstObject(ObjectArray), NavData);
+				Status &= SetAlmanacFile(JsonStream::GetFirstObject(ObjectArray), NavData);
 			ObjectArray = JsonStream::GetNextObject(ObjectArray);
 		}
 	}
-	return TRUE;
+	else
+		Status = FALSE;
+	return Status;
 }
 
 BOOL SetAlmanacFile(JsonObject *Object, CNavData &NavData)
 {
+	BOOL Status = FALSE;
+
 	while (Object)
 	{
 		if (strcmp(Object->Key, "name") == 0)
-			NavData.ReadAlmFile(Object->String);
+			Status = NavData.ReadAlmFile(Object->String);
 		Object = JsonStream::GetNextObject(Object);
 	}
-	return TRUE;
+	return Status;
 }
 
 BOOL SetOutputParam(JsonObject *Object, OUTPUT_PARAM &OutputParam)

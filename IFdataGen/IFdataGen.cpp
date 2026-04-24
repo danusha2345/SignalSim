@@ -145,7 +145,11 @@ int main(int argc, char* argv[])
 
     Object = JsonTree.GetRootObject();
 
-	AssignParameters(Object, &UtcTime, &StartPos, &StartVel, &Trajectory, &NavData, &OutputParam, &PowerControl, NULL);
+	if (!AssignParameters(Object, &UtcTime, &StartPos, &StartVel, &Trajectory, &NavData, &OutputParam, &PowerControl, NULL))
+	{
+		std::cerr << "[ERROR]\tInvalid configuration parameters\n";
+		return 1;
+	}
 
 	if (!Arguments.OutputFile.empty())
 	{

@@ -261,7 +261,7 @@ PGLONASS_EPHEMERIS CNavData::FindGloEphemeris(GLONASS_TIME GlonassTime, int slot
 	return Eph;
 }
 
-void CNavData::ReadNavFile(const char *filename)
+BOOL CNavData::ReadNavFile(const char *filename)
 {
 	FILE *fp;
 	NavDataType DataType;
@@ -271,7 +271,7 @@ void CNavData::ReadNavFile(const char *filename)
 	if ((fp = fopen(filename, "r")) == NULL)
 	{
 		MessagePrint(MSG_LEVEL_ERROR, "Unable to open ephemeris file: %s\n", filename);
-		return;	// for multiple RINEX navigation file to be loaded, one file load fail will only possibly reduce the visible satellite
+		return FALSE;
 	}
 
 	while ((DataType = LoadNavFileHeader(fp, (void *)&NavData)) != NavDataEnd)
@@ -287,9 +287,11 @@ void CNavData::ReadNavFile(const char *filename)
 		if (DataType != NavDataUnknown)
 			AddNavData(DataType, (void *)&NavData);
 	}
+	fclose(fp);
+	return TRUE;
 }
 
-void CNavData::ReadAlmFile(const char *filename)
+BOOL CNavData::ReadAlmFile(const char *filename)
 {
 	FILE *fp;
 	AlmanacType Type;
@@ -297,7 +299,7 @@ void CNavData::ReadAlmFile(const char *filename)
 	if ((fp = fopen(filename, "r")) == NULL)
 	{
 		MessagePrint(MSG_LEVEL_ERROR, "Unable to open almanac file: %s\n", filename);
-		return;
+		return FALSE;
 	}
 	Type = CheckAlmnanacType(fp);
 	switch (Type)
@@ -314,7 +316,13 @@ void CNavData::ReadAlmFile(const char *filename)
 	case AlmanacGlonass:
 		ReadAlmanacGlonass(fp, GlonassAlmanac);
 		break;
+	default:
+		MessagePrint(MSG_LEVEL_ERROR, "Unknown almanac file type: %s\n", filename);
+		fclose(fp);
+		return FALSE;
 	}
+	fclose(fp);
+	return TRUE;
 }
 
 void CNavData::CompleteAlmanac(GnssSystem system, UTC_TIME time)
