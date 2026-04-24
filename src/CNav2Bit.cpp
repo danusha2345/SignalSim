@@ -1015,7 +1015,7 @@ void CNav2Bit::ComposeSubframe2(PGPS_EPHEMERIS Eph, unsigned int Subframe2[18], 
 	Subframe2[3] = COMPOSE_BITS(IntValue, 28, 4);
 	IntValue = UnscaleInt(Eph->delta_n / PI, -44);	// delta_n
 	Subframe2[3] |= COMPOSE_BITS(IntValue, 11, 17);
-	IntValue = UnscaleInt(Eph->delta_n_dot, -57);	// delta n dot
+	IntValue = UnscaleInt(Eph->delta_n_dot / PI, -57);	// delta n dot
 	Subframe2[3] |= COMPOSE_BITS(IntValue >> 12, 0, 11);
 	Subframe2[4] = COMPOSE_BITS(IntValue, 20, 12);
 	LongValue = UnscaleLong(Eph->M0 / PI, -32);		// M0
