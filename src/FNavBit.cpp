@@ -246,7 +246,7 @@ int FNavBit::ComposeAlmWords(GPS_ALMANAC Almanac[], unsigned int AlmData[2][7], 
 	AlmData[0][4] |= COMPOSE_BITS(IntValue >> 1, 0, 12);
 	AlmData[0][5] = COMPOSE_BITS(IntValue, 31, 1);
 	AlmData[0][5] |= COMPOSE_BITS((Almanac[1].valid & 1) ? 0 : 1, 29, 2);
-	AlmData[0][5] = COMPOSE_BITS(Almanac[1].svid, 23, 6);	// SVID2 starts here
+	AlmData[0][5] |= COMPOSE_BITS(Almanac[1].svid, 23, 6);	// SVID2 starts here
 	IntValue = UnscaleInt(Almanac[1].sqrtA - SQRT_A0, -9);
 	AlmData[0][5] |= COMPOSE_BITS(IntValue, 10, 13);
 	UintValue = UnscaleUint(Almanac[1].ecc, -16);
