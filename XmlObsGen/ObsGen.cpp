@@ -22,7 +22,7 @@
 void CalcObservation(PSAT_OBSERVATION Obs, PSATELLITE_PARAM SatParam, unsigned int FreqSelect);
 void SetSysObsType(int system, unsigned int ObsType[], unsigned int FreqSelect);
 
-void main(void)
+int main(void)
 {
 	int i, index;
 	GNSS_TIME time;
@@ -105,7 +105,7 @@ void main(void)
 
 	fp = fopen(OutputParam.filename, "w");
 	if (fp == NULL)
-		return;
+		return 1;
 
 	GpsSatNumber = (OutputParam.FreqSelect[GpsSystem]) ? GetVisibleSatellite(PosVel, time, OutputParam, GpsSystem, GpsEph, TOTAL_GPS_SAT, GpsEphVisible) : 0;
 	BdsSatNumber = (OutputParam.FreqSelect[BdsSystem]) ? GetVisibleSatellite(PosVel, time, OutputParam, BdsSystem, BdsEph, TOTAL_BDS_SAT, BdsEphVisible) : 0;
@@ -287,6 +287,7 @@ void main(void)
 		fprintf(fp, "\t\t\t</coordinates>\n\t\t</LineString>\n\t</Placemark>\n</Document> </kml>\n");
 	}
 	fclose(fp);
+	return 0;
 }
 
 void CalcObservation(PSAT_OBSERVATION Obs, PSATELLITE_PARAM SatParam, unsigned int FreqSelect)

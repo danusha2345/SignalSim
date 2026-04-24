@@ -19,6 +19,7 @@ add_executable (XmlObsGen.cmake
 "../src/Almanac.cpp"
 "../src/Coordinate.cpp"
 "../src/GnssTime.cpp"
+"../src/MessageOutput.cpp"
 "../src/NavData.cpp"
 "../src/PowerControl.cpp"
 "../src/Rinex.cpp"
