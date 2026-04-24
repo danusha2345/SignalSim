@@ -191,7 +191,7 @@ unsigned int NavBit::Crc24qEncode(unsigned int *BitStream, int Length)
 	{
 		crc_result = (crc_result << 8) ^ Crc24q[(Data >> 24) ^ (unsigned char)(crc_result >> 16)];
 		Data <<= 8;
-		if ((i & 3) == 3)	// move to next bit
+		if ((i & 3) == 3 && (i >> 2) + 1 < (ByteNum >> 2))	// move to next word if not past end
 			Data = BitStream[(i >> 2) + 1];
 	}
 
