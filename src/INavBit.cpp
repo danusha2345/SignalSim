@@ -175,7 +175,7 @@ int INavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 	subframe = ((TOW + ((Param == 1) ? 360 : 0)) % 720) / 30;
 	page = (TOW % 30) / 2;
 	Word = (Param == 1) ? WordAllocationE1[page] : WordAllocationE5[page];
-	if (Word > 10) Word = 63;	// temporarily put all word exceed 10 as dummy word
+	if (Word > 10 && Word != 17 && Word != 19) Word = 63;	// unsupported RedCED/SAR words use dummy
 	if ((subframe & 1) && ((Word == 7) || (Word == 8)))	// Word 7/9 and Word 8/10 toggle for different subframe
 		Word += 2;
 	if ((subframe & 1) && ((Word == 17) || (Word == 19)))	// Word 17/18 and Word 19/20 toggle for different subframe
