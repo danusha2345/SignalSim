@@ -213,6 +213,7 @@ int INavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 	// do convolution encode on even part (EncodeData[0] bit3 through EncodeData[4] bit18)
 	ConvEncodeBits = 0;
 	EncodeWord = EncodeData[0] << 28;	// move to MSB
+	memset(EvenPart, 0, sizeof(EvenPart));
 	for (i = 0, BitCount = 28; i < 114 / 2; i ++)
 	{
 		EvenPart[i/2] = (EvenPart[i/2] << 4) + GalConvolutionEncode(ConvEncodeBits, EncodeWord);
@@ -227,6 +228,7 @@ int INavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 	// do convolution encode on odd part (EncodeData[4] bit17 through EncodeData[6] bit0)
 	ConvEncodeBits = 0;
 	EncodeWord = EncodeData[4] << 14;	// move to MSB
+	memset(OddPart, 0, sizeof(OddPart));
 	for (i = 0, BitCount = 142; i < 82 / 2; i ++, BitCount += 2)
 	{
 		OddPart[i/2] = (OddPart[i/2] << 4) + GalConvolutionEncode(ConvEncodeBits, EncodeWord);

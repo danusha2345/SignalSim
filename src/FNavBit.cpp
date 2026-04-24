@@ -49,6 +49,7 @@ int FNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 	// do convolution encode (EncodeData[0] bit22 through EncodeData[6] bit0)
 	ConvEncodeBits = 0;
 	EncodeWord = EncodeData[0] << 10;	// move to MSB
+	memset(EncodeMessage, 0, sizeof(EncodeMessage));
 	for (i = 0, BitCount = 10; i < 214 / 2; i ++)
 	{
 		EncodeMessage[i/2] = (EncodeMessage[i/2] << 4) + GalConvolutionEncode(ConvEncodeBits, EncodeWord);

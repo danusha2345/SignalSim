@@ -74,6 +74,7 @@ int CNavBit::GetFrameData(GNSS_TIME StartTime, int svid, int Param, int *NavBits
 	// do convolution encode (EncodeData[0] bit22 through EncodeData[6] bit0)
 	ConvEncodeBits = Param ? ConvEncodeBitsL5[svid-1] : ConvEncodeBitsL2[svid-1];
 	EncodeWord = EncodeData[0] << 12;	// move to MSB
+	memset(EncodeMessage, 0, sizeof(EncodeMessage));
 	for (i = 0, BitCount = 12; i < 276 / 2; i ++)
 	{
 		EncodeMessage[i/2] = (EncodeMessage[i/2] << 4) + ConvolutionEncodePair(ConvEncodeBits, EncodeWord);
