@@ -572,9 +572,11 @@ int D1D2NavBit::FillBdsHealthPage(PGPS_ALMANAC Almanac, int Length, unsigned int
 			Stream[index0/22] |= COMPOSE_BITS(health, (21 - (index1 % 22)), 9);
 		else
 		{
-			Stream[index1/22] |= COMPOSE_BITS(health, (21 - (index1 % 22)), ((index1 % 22) + 1));	// fill in LSB
-			health >>= ((index1 % 22) + 1);
-			Stream[index0/22] |= COMPOSE_BITS(health, 0, (8 - (index0 % 22)));	// fill in MSB
+			int lsb_width = (index1 % 22) + 1;
+			int msb_width = 9 - lsb_width;
+			Stream[index1/22] |= COMPOSE_BITS(health, (21 - (index1 % 22)), lsb_width);	// fill in LSB
+			health >>= lsb_width;
+			Stream[index0/22] |= COMPOSE_BITS(health, 0, msb_width);	// fill in MSB
 		}
 	}
 
