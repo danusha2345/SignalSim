@@ -399,9 +399,9 @@ int INavBit::ComposeEphWords(PGPS_EPHEMERIS Ephemeris, unsigned int *EphData)
 	EphData[15] |= COMPOSE_BITS(IntValue, 2, 6);
 
 	// Word 5
-	EphData[16] &= 0x03ffffff; EphData[16] = 0x14000000;	// put Type=5 to 6MSB
+	EphData[16] &= 0x03ffffff; EphData[16] |= 0x14000000;	// put Type=5 to 6MSB, preserve iono
 	IntValue = UnscaleInt(Ephemeris->tgd, -32);
-	EphData[17] = COMPOSE_BITS(IntValue, 7, 10);
+	EphData[17] &= 0xfffe0000; EphData[17] |= COMPOSE_BITS(IntValue, 7, 10);
 	IntValue = UnscaleInt(Ephemeris->tgd2, -32);
 	EphData[17] |= COMPOSE_BITS(IntValue >> 3, 0, 7);
 	EphData[18] = COMPOSE_BITS(IntValue, 29, 3);
