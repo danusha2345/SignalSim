@@ -191,7 +191,7 @@ int CNavBit::ComposeEphWords(PGPS_EPHEMERIS Ephemeris, unsigned int EphData[2][9
 	IntValue = UnscaleInt(Ephemeris->axis - A_REF, -9);
 	EphData[0][2] |= COMPOSE_BITS(IntValue >> 23, 0, 3);
 	EphData[0][3] = COMPOSE_BITS(IntValue, 9, 23);
-	IntValue = UnscaleUint(Ephemeris->axis_dot, -21);
+	IntValue = UnscaleInt(Ephemeris->axis_dot, -21);
 	EphData[0][3] |= COMPOSE_BITS(IntValue >> 16, 0, 9);
 	EphData[0][4] = COMPOSE_BITS(IntValue, 16, 16);
 	IntValue = UnscaleInt(Ephemeris->delta_n / PI, -44);
