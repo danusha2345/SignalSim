@@ -572,6 +572,7 @@ void CTrajectory::ClearTrajectoryList()
 		pSegment = pCurSegment->m_pNextTrajectory;
 		delete pCurSegment;
 	}
+	m_pTrajectoryList = m_pCurrentTrajectory = (CTrajectorySegment *)NULL;
 }
 
 int CTrajectory::AppendTrajectory(TrajectoryType TrajType, TrajectoryDataType DataType1, double Data1, TrajectoryDataType DataType2, double Data2)

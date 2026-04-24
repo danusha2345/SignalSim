@@ -327,9 +327,9 @@ PrnGenerate::PrnGenerate(GnssSystem System, int SignalIndex, int Svid)
 PrnGenerate::~PrnGenerate()
 {
 	if (DataPrn)
-		delete DataPrn;
+		delete[] DataPrn;
 	if (PilotPrn)
-		delete PilotPrn;
+		delete[] PilotPrn;
 }
 
 int *PrnGenerate::GetGoldCode(unsigned int G1Init, unsigned int G1Poly, unsigned int G2Init, unsigned int G2Poly, int Length, int Depth, int ResetPos)

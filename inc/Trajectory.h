@@ -29,7 +29,7 @@ class CTrajectorySegment
 {
 public:
 	CTrajectorySegment();
-	~CTrajectorySegment();
+	virtual ~CTrajectorySegment();
 #if 0
 	static LLA_POSITION EcefToLla(KINEMATIC_INFO ecef_pos);
 	static KINEMATIC_INFO LlaToEcef(LLA_POSITION lla_pos);
