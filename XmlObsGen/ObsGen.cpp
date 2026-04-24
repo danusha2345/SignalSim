@@ -57,7 +57,11 @@ int main(void)
 
 	XmlTree.parse("test_obs2.xml");
 	RootElement = XmlTree.getroot();
-	AssignParameters(RootElement, &UtcTime, &StartPos, &StartVel, &Trajectory, &NavData, &OutputParam, &PowerControl, NULL);
+	if (!AssignParameters(RootElement, &UtcTime, &StartPos, &StartVel, &Trajectory, &NavData, &OutputParam, &PowerControl, NULL))
+	{
+		fprintf(stderr, "[ERROR]\tInvalid XML configuration parameters\n");
+		return 1;
+	}
 
 	Trajectory.ResetTrajectoryTime();
 	PosVel = LlaToEcef(StartPos);

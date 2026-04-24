@@ -29,6 +29,7 @@ BOOL AssignParameters(CXmlElement *RootElement, PUTC_TIME UtcTime, PLLA_POSITION
 {
 	int i = 0;
 	CXmlElement *Element;
+	BOOL Status = TRUE;
 
 	while ((Element = RootElement->GetElement(i ++)) != NULL)
 	{
@@ -37,9 +38,9 @@ BOOL AssignParameters(CXmlElement *RootElement, PUTC_TIME UtcTime, PLLA_POSITION
 		else if (strcmp(Element->GetTag(), "Trajectory") == 0 && StartPos && StartVel && Trajectory)
 			SetTrajectory(Element, *StartPos, *StartVel, *Trajectory);
 		else if (strcmp(Element->GetTag(), "Ephemeris") == 0 && NavData)
-			NavData->ReadNavFile(Element->GetText());
-		else if (strcmp(Element->GetTag(), "Almanac") == 0)
-			NavData->ReadAlmFile(Element->GetText());
+			Status &= NavData->ReadNavFile(Element->GetText());
+		else if (strcmp(Element->GetTag(), "Almanac") == 0 && NavData)
+			Status &= NavData->ReadAlmFile(Element->GetText());
 		else if (strcmp(Element->GetTag(), "Output") == 0 && OutputParam)
 			SetOutputParam(Element, *OutputParam);
 		else if (strcmp(Element->GetTag(), "PowerControl") == 0 && PowerControl)
@@ -48,7 +49,7 @@ BOOL AssignParameters(CXmlElement *RootElement, PUTC_TIME UtcTime, PLLA_POSITION
 			SetDelayConfig(Element, *DelayConfig);
 	}
 
-	return TRUE;
+	return Status;
 }
 
 BOOL AssignStartTime(CXmlElement *Element, UTC_TIME &UtcTime)
