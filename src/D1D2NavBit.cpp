@@ -49,7 +49,7 @@ D1D2NavBit::D1D2NavBit()
 		BdsStreamAlm[i][8] = 3;	// AmID = 01
 	}
 	for (i = 0; i < 4; i ++)	// subframe 5 page 7~10
-		BdsStreamInfo[0][0] = (i + 7) << 2;
+		BdsStreamInfo[i][0] = (i + 7) << 2;
 	for (i = 0; i < 3; i ++)	// subframe 5 page 24
 	{
 		BdsStreamHealth[i][0] = 24 << 2;
@@ -179,9 +179,10 @@ int D1D2NavBit::SetAlmanac(GPS_ALMANAC Alm[])
 			week = Alm[i].week & 0xff;
 		}
 	}
-	memset(BdsStreamInfo, 0, sizeof(unsigned int) * 18);
+	memset(BdsStreamInfo, 0, sizeof(unsigned int) * 27);
 	BdsStreamInfo[0][0] = 7 << 2;
 	BdsStreamInfo[1][0] = 8 << 2;
+	BdsStreamInfo[2][0] = 9 << 2;
 	memset(BdsStreamHealth, 0x0, sizeof(BdsStreamHealth));
 	for (i = 0; i < 3; i ++)	// subframe 5 page 24
 	{
