@@ -464,7 +464,7 @@ BOOL DecodeEphParam(NavDataType DataType, char *str, FILE *fp_nav, PGPS_EPHEMERI
 			Eph->flag = 0;	// put URA_NED later
 			Eph->tgd = data[25] - data[27];      /* TGD - ISC_L1CA */
 			Eph->tgd2 = data[25] - data[28];      /* TGD - ISC_L2C */
-			Eph->tgd_ext[0] = Eph->tgd_ext[1] = Eph->tgd - data[27];	/* TGD for L1Cd and L1Cp */
+			Eph->tgd_ext[0] = Eph->tgd_ext[1] = Eph->tgd;	/* TGD for L1Cd and L1Cp */
 			Eph->tgd_ext[2] = data[25] - data[29];	/* TGD for L5I */
 			Eph->tgd_ext[3] = data[25] - data[30];	/* TGD for L5Q */
 			Eph->tgd_ext[4] = data[25];	/* store TGD for navigation data recovery */
@@ -565,8 +565,8 @@ BOOL DecodeEphParam(NavDataType DataType, char *str, FILE *fp_nav, PGPS_EPHEMERI
 			Eph->health = (unsigned short)data[28];      /* sv health */
 			Eph->ura = GetUraIndex(data[23]);
 			Eph->flag = (unsigned short)data[21] | ((unsigned short)data[29] << 8) | ((unsigned short)data[27] << 11);;
-			Eph->tgd = data[29] / TGD_GAMMA_E5b;      /* TGD for B1I */
-			Eph->tgd2 = data[29];      /* TGD for B2I */
+			Eph->tgd = data[30] / TGD_GAMMA_E5b;      /* TGD for B1I */
+			Eph->tgd2 = data[30];      /* TGD for B2I */
 			Eph->tgd_ext[0] = Eph->tgd_ext[1] = Eph->tgd;	/* TGD for B1Cd and B1Cp */
 			Eph->tgd_ext[2] = Eph->tgd2;	/* TGD for B2ad */
 			Eph->tgd_ext[3] = Eph->tgd2;	/* TGD forB2ap */
